@@ -181,51 +181,27 @@ class HostedWebsite(Document):
 
         frappe.msgprint("Installing WordPress...")
         try:
-            # 1. Cache Handling
-            cache_dir = "/var/lib/rokct/hosting/cache/wordpress"
-            cache_file = os.path.join(cache_dir, "latest.tar.gz")
-
-            subprocess.run(["sudo", "mkdir", "-p", cache_dir], check=True)
-
-            need_download = True
-            if os.path.exists(cache_file):
-                 # Check age (24h)
-                 try:
-                     if (time.time() - os.path.getmtime(cache_file)) < 86400:
-                         need_download = False
-                 except OSError:
-                     # Could not stat, assume redownload
-                     pass
-
-            if need_download:
-                frappe.msgprint("Downloading latest WordPress to cache...")
-                subprocess.run(["sudo", "wget", "https://wordpress.org/latest.tar.gz", "-O", cache_file], check=True)
-            else:
-                frappe.msgprint("Using cached WordPress installer.")
-
-            # 2. Extract
-            # Use a specific tmp file to avoid conflicts
-            tmp_extract = f"/tmp/wp_extract_{self.name}"
-            subprocess.run(["sudo", "mkdir", "-p", tmp_extract], check=True)
-            subprocess.run(["sudo", "tar", "-xzf", cache_file, "-C", tmp_extract], check=True)
-
-            # Move contents to site_path
-            # WordPress archive extracts to a 'wordpress' folder
-            src = os.path.join(tmp_extract, "wordpress")
-            subprocess.run(["sudo", "rsync", "-a", f"{src}/", f"{self.site_path}/"], check=True)
-
-            # Cleanup
-            subprocess.run(["sudo", "rm", "-rf", tmp_extract], check=True)
-
-            # 3. Generate wp-config.php
+            # Use WP-CLI to download WordPress (uses version installed on server)
+            # This gives admins control over WP version via Service Version management
+            
+            # 1. Download WordPress using WP-CLI
+            subprocess.run([
+                "sudo", "-u", "www-data", "wp", "core", "download",
+                f"--path={self.site_path}",
+                "--allow-root"
+            ], check=True)
+            
+            # 2. Generate wp-config.php
             self.generate_wp_config()
-
-            # 4. Permissions
+            
+            # 3. Permissions
             subprocess.run(["sudo", "chown", "-R", "www-data:www-data", self.site_path], check=True)
+            
+            frappe.msgprint("WordPress installed successfully")
 
         except subprocess.CalledProcessError as e:
             frappe.log_error(f"WP Install Failed: {e}")
-            frappe.throw("WordPress Installation Failed during download or extraction.")
+            frappe.throw("WordPress Installation Failed. Please check if WP-CLI is installed on the server.")
 
     def generate_wp_config(self):
         import requests

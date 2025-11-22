@@ -18,8 +18,13 @@ echo -e "${BLUE}=================================================${NC}"
 
 # Determine deployment mode
 MODE="${DEPLOY_MODE:-fresh}"
-if [[ "$MODE" != "fresh" && "$MODE" != "bench" && "$MODE" != "dependency" ]]; then
-  echo -e "${RED}Invalid DEPLOY_MODE: $MODE. Use fresh, bench, or dependency.${NC}"
+if [[ "$MODE" != "fresh" && "$MODE" != "bench" ]]; then
+  echo -e "${RED}Invalid DEPLOY_MODE: $MODE. Use 'fresh' or 'bench'.${NC}"
+  echo ""
+  echo "Modes:"
+  echo "  fresh - Full VPS setup (system packages, MariaDB, Bench, RPanel)"
+  echo "  bench - Add RPanel to existing Frappe bench"
+  echo ""
   exit 1
 fi
 
@@ -133,11 +138,8 @@ case "$MODE" in
     install_bench
     ;;
   bench)
-    # Assume Bench already exists; ensure frappe user exists
+    # Existing bench - just ensure frappe user exists
     create_frappe_user || true
-    ;;
-  dependency)
-    # No system changes, just ensure frappe user exists (may already be present)
     ;;
 esac
 
@@ -162,61 +164,55 @@ else
   cd ../..
 fi
 # Ensure site exists (only for fresh or bench mode)
-if [[ "$MODE" != "dependency" ]]; then
-  SITE_NAME="${DOMAIN_NAME:-rpanel.local}"
-  if [ ! -d "sites/$SITE_NAME" ]; then
-    bench new-site $SITE_NAME --admin-password admin --db-root-password $DB_ROOT_PASS --install-app rpanel || true
-  fi
-  bench --site $SITE_NAME install-app rpanel
+SITE_NAME="${DOMAIN_NAME:-rpanel.local}"
+if [ ! -d "sites/$SITE_NAME" ]; then
+  bench new-site $SITE_NAME --admin-password admin --db-root-password $DB_ROOT_PASS --install-app rpanel || true
 fi
+bench --site $SITE_NAME install-app rpanel
 EOF
 
-# Production setup (only for fresh or bench mode)
-if [[ "$MODE" != "dependency" ]]; then
-  echo -e "${GREEN}Configuring production services...${NC}"
-  sudo bench setup production frappe
+# Production setup
+echo -e "${GREEN}Configuring production services...${NC}"
+sudo bench setup production frappe
+
+# Provision localhost if self-hosted mode
+if [[ "$MODE" == "fresh" && ("$SELF_HOSTED" == "Y" || "$SELF_HOSTED" == "y") ]]; then
+  echo -e "${GREEN}=================================================${NC}"
+  echo -e "${GREEN}Provisioning localhost for website hosting...${NC}"
+  echo -e "${GREEN}=================================================${NC}"
+  echo ""
   
-  # Provision localhost if self-hosted mode
-  if [[ "$MODE" == "fresh" && ("$SELF_HOSTED" == "Y" || "$SELF_HOSTED" == "y") ]]; then
-    echo -e "${GREEN}=================================================${NC}"
-    echo -e "${GREEN}Provisioning localhost for website hosting...${NC}"
-    echo -e "${GREEN}=================================================${NC}"
-    echo ""
-    
-    # Run the provisioning script
-    bash /home/frappe/frappe-bench/apps/rpanel/scripts/provision_localhost.sh
-    
-    echo -e "${GREEN}Localhost provisioning complete!${NC}"
-  fi
+  # Run the provisioning script
+  bash /home/frappe/frappe-bench/apps/rpanel/scripts/provision_localhost.sh
   
-  # Setup SSL if domain is not localhost/rpanel.local
-  if [[ "$MODE" == "fresh" && "$DOMAIN_NAME" != "rpanel.local" && "$DOMAIN_NAME" != "localhost" ]]; then
-    echo -e "${GREEN}Setting up SSL for $DOMAIN_NAME...${NC}"
-    echo -e "${BLUE}Note: Make sure $DOMAIN_NAME points to this server's IP address${NC}"
-    read -p "Press Enter to continue with SSL setup (or Ctrl+C to skip)..."
-    
-    # Run certbot for the domain
-    certbot --nginx -d $DOMAIN_NAME --non-interactive --agree-tos --register-unsafely-without-email || {
-      echo -e "${RED}SSL setup failed. You can run 'sudo certbot --nginx -d $DOMAIN_NAME' manually later.${NC}"
-    }
-  fi
+  echo -e "${GREEN}Localhost provisioning complete!${NC}"
+fi
+
+# Setup SSL if domain is not localhost/rpanel.local
+if [[ "$MODE" == "fresh" && "$DOMAIN_NAME" != "rpanel.local" && "$DOMAIN_NAME" != "localhost" ]]; then
+  echo -e "${GREEN}Setting up SSL for $DOMAIN_NAME...${NC}"
+  echo -e "${BLUE}Note: Make sure $DOMAIN_NAME points to this server's IP address${NC}"
+  read -p "Press Enter to continue with SSL setup (or Ctrl+C to skip)..."
+  
+  # Run certbot for the domain
+  certbot --nginx -d $DOMAIN_NAME --non-interactive --agree-tos --register-unsafely-without-email || {
+    echo -e "${RED}SSL setup failed. You can run 'sudo certbot --nginx -d $DOMAIN_NAME' manually later.${NC}"
+  }
 fi
 
 # Final output
 echo -e "${GREEN}Installation complete!${NC}"
-if [[ "$MODE" != "dependency" ]]; then
-  SITE_NAME="${DOMAIN_NAME:-rpanel.local}"
-  if [[ "$DOMAIN_NAME" != "rpanel.local" && "$DOMAIN_NAME" != "localhost" ]]; then
-    echo -e "${BLUE}URL: https://$DOMAIN_NAME${NC}"
-  else
-    echo -e "${BLUE}URL: http://$(curl -s ifconfig.me)${NC}"
-  fi
-  echo -e "${BLUE}Site: $SITE_NAME${NC}"
-  echo -e "${BLUE}Admin Password: admin${NC}"
-  echo ""
-  echo -e "${GREEN}Email service (Exim4) is configured and running.${NC}"
-  echo -e "${GREEN}RPanel can now send email notifications.${NC}"
+SITE_NAME="${DOMAIN_NAME:-rpanel.local}"
+if [[ "$DOMAIN_NAME" != "rpanel.local" && "$DOMAIN_NAME" != "localhost" ]]; then
+  echo -e "${BLUE}URL: https://$DOMAIN_NAME${NC}"
+else
+  echo -e "${BLUE}URL: http://$(curl -s ifconfig.me)${NC}"
 fi
+echo -e "${BLUE}Site: $SITE_NAME${NC}"
+echo -e "${BLUE}Admin Password: admin${NC}"
+echo ""
+echo -e "${GREEN}Email service (Exim4) is configured and running.${NC}"
+echo -e "${GREEN}RPanel can now send email notifications.${NC}"
 
 
 # RPanel Standalone Installer

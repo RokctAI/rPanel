@@ -8,6 +8,7 @@ import sys
 def after_install():
     """Run after RPanel installation"""
     print("Installing RPanel dependencies...")
+    check_and_install_system_dependencies()
     install_dependencies()
     create_default_settings()
     print("RPanel installed successfully!")
@@ -84,3 +85,81 @@ def create_default_settings():
             print("✓ Default Hosting Settings created")
         except Exception as e:
             print(f"Note: Could not create default settings: {str(e)}")
+
+
+def check_and_install_system_dependencies():
+    """
+    Check for and install missing system dependencies when RPanel is installed via bench install-app
+    Gets MariaDB password from common_site_config.json
+    Reads dependency list from dependencies.json (single source of truth)
+    """
+    import os
+    import json
+    
+    print("\n=== Checking System Dependencies ===")
+    
+    # Load dependencies from single source of truth
+    try:
+        deps_file = os.path.join(os.path.dirname(__file__), '..', 'dependencies.json')
+        with open(deps_file, 'r') as f:
+            all_deps = json.load(f)
+        
+        # Get system dependencies (hosting services)
+        dependencies = all_deps.get('system_dependencies', {})
+    except Exception as e:
+        print(f"Error: Could not load dependencies.json: {str(e)}")
+        return
+    
+    # Get MariaDB root password from common_site_config.json
+    try:
+        bench_path = frappe.utils.get_bench_path()
+        config_path = os.path.join(bench_path, 'sites', 'common_site_config.json')
+        
+        with open(config_path, 'r') as f:
+            config = json.load(f)
+        
+        db_password = config.get('db_password') or config.get('root_password', '')
+    except Exception as e:
+        print(f"Warning: Could not read MariaDB password from config: {str(e)}")
+        db_password = ''
+    
+    # Check which dependencies are missing
+    missing_deps = []
+    
+    for dep_name, dep_info in dependencies.items():
+        try:
+            result = subprocess.run(dep_info['check'], shell=True, capture_output=True)
+            if result.returncode != 0:
+                missing_deps.append(dep_name)
+            else:
+                print(f"✓ {dep_name} is installed")
+        except Exception:
+            missing_deps.append(dep_name)
+    
+    if not missing_deps:
+        print("✓ All system dependencies are installed")
+        return
+    
+    # Auto-install missing dependencies
+    print(f"\nMissing dependencies: {', '.join(missing_deps)}")
+    print("Installing missing dependencies automatically...\n")
+    
+    # Update package list first
+    try:
+        subprocess.run('apt-get update', shell=True, check=True)
+    except Exception as e:
+        print(f"Warning: apt-get update failed: {str(e)}")
+    
+    # Install each missing dependency
+    for dep_name in missing_deps:
+        if dep_name in dependencies:
+            dep_info = dependencies[dep_name]
+            print(f"{dep_name} is missing, installing...")
+            try:
+                subprocess.run(dep_info['install'], shell=True, check=True)
+                print(f"✓ {dep_name} installed successfully\n")
+            except Exception as e:
+                print(f"✗ Failed to install {dep_name}: {str(e)}")
+                print(f"  You may need to install it manually: sudo {dep_info['install']}\n")
+    
+    print("\n✓ System dependency installation complete")
