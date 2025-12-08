@@ -129,6 +129,15 @@ echo "[7/12] Checking Roundcube..."
 if ! dpkg -l | grep -q roundcube; then
     echo "Installing Roundcube..."
     DEBIAN_FRONTEND=noninteractive apt install -y roundcube roundcube-core roundcube-mysql roundcube-plugins
+    
+    # Force Elastic skin (Modern UI)
+    if [ -f "/etc/roundcube/config.inc.php" ]; then
+        if grep -q "config\['skin'\]" /etc/roundcube/config.inc.php; then
+            sed -i "s/\\\$config\['skin'\] = .*/\\\$config['skin'] = 'elastic';/" /etc/roundcube/config.inc.php
+        else
+            echo "\$config['skin'] = 'elastic';" >> /etc/roundcube/config.inc.php
+        fi
+    fi
 else
     echo "✓ Roundcube already installed"
 fi
