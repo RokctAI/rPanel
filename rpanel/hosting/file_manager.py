@@ -12,10 +12,15 @@ import mimetypes
 @frappe.whitelist()
 def get_file_list(website_name, path=""):
     """Get list of files and directories for a website"""
-    doc = frappe.get_doc('Hosted Website', website_name)
+    if website_name == 'local_control_site':
+        if "System Manager" not in frappe.get_roles():
+            frappe.throw("Access Denied")
+        base_path = os.path.abspath(frappe.get_site_path())
+    else:
+        doc = frappe.get_doc('Hosted Website', website_name)
+        base_path = doc.site_path
     
     # Security: Ensure path doesn't escape site_path
-    base_path = doc.site_path
     if not base_path or not os.path.exists(base_path):
         frappe.throw(f"Site path does not exist: {base_path}")
     
@@ -62,9 +67,14 @@ def get_file_list(website_name, path=""):
 @frappe.whitelist()
 def download_file(website_name, file_path):
     """Download a file from the website directory"""
-    doc = frappe.get_doc('Hosted Website', website_name)
-    
-    base_path = doc.site_path
+    if website_name == 'local_control_site':
+        if "System Manager" not in frappe.get_roles():
+            frappe.throw("Access Denied")
+        base_path = os.path.abspath(frappe.get_site_path())
+    else:
+        doc = frappe.get_doc('Hosted Website', website_name)
+        base_path = doc.site_path
+
     full_path = os.path.join(base_path, file_path.lstrip('/'))
     
     # Security check
@@ -90,9 +100,14 @@ def download_file(website_name, file_path):
 @frappe.whitelist()
 def upload_file(website_name, path, filename, filedata):
     """Upload a file to the website directory"""
-    doc = frappe.get_doc('Hosted Website', website_name)
-    
-    base_path = doc.site_path
+    if website_name == 'local_control_site':
+        if "System Manager" not in frappe.get_roles():
+            frappe.throw("Access Denied")
+        base_path = os.path.abspath(frappe.get_site_path())
+    else:
+        doc = frappe.get_doc('Hosted Website', website_name)
+        base_path = doc.site_path
+
     target_dir = os.path.join(base_path, path.lstrip('/'))
     
     # Security check
@@ -128,9 +143,14 @@ def upload_file(website_name, path, filename, filedata):
 @frappe.whitelist()
 def delete_file(website_name, file_path):
     """Delete a file or directory"""
-    doc = frappe.get_doc('Hosted Website', website_name)
-    
-    base_path = doc.site_path
+    if website_name == 'local_control_site':
+        if "System Manager" not in frappe.get_roles():
+            frappe.throw("Access Denied")
+        base_path = os.path.abspath(frappe.get_site_path())
+    else:
+        doc = frappe.get_doc('Hosted Website', website_name)
+        base_path = doc.site_path
+
     full_path = os.path.join(base_path, file_path.lstrip('/'))
     
     # Security check
@@ -160,9 +180,14 @@ def delete_file(website_name, file_path):
 @frappe.whitelist()
 def create_directory(website_name, path, dirname):
     """Create a new directory"""
-    doc = frappe.get_doc('Hosted Website', website_name)
-    
-    base_path = doc.site_path
+    if website_name == 'local_control_site':
+        if "System Manager" not in frappe.get_roles():
+            frappe.throw("Access Denied")
+        base_path = os.path.abspath(frappe.get_site_path())
+    else:
+        doc = frappe.get_doc('Hosted Website', website_name)
+        base_path = doc.site_path
+
     parent_dir = os.path.join(base_path, path.lstrip('/'))
     new_dir = os.path.join(parent_dir, dirname)
     
@@ -190,9 +215,14 @@ def create_directory(website_name, path, dirname):
 @frappe.whitelist()
 def rename_file(website_name, old_path, new_name):
     """Rename a file or directory"""
-    doc = frappe.get_doc('Hosted Website', website_name)
-    
-    base_path = doc.site_path
+    if website_name == 'local_control_site':
+        if "System Manager" not in frappe.get_roles():
+            frappe.throw("Access Denied")
+        base_path = os.path.abspath(frappe.get_site_path())
+    else:
+        doc = frappe.get_doc('Hosted Website', website_name)
+        base_path = doc.site_path
+
     old_full_path = os.path.join(base_path, old_path.lstrip('/'))
     
     # Get parent directory
@@ -228,9 +258,14 @@ def rename_file(website_name, old_path, new_name):
 @frappe.whitelist()
 def read_file(website_name, file_path):
     """Read file content (for text files)"""
-    doc = frappe.get_doc('Hosted Website', website_name)
-    
-    base_path = doc.site_path
+    if website_name == 'local_control_site':
+        if "System Manager" not in frappe.get_roles():
+            frappe.throw("Access Denied")
+        base_path = os.path.abspath(frappe.get_site_path())
+    else:
+        doc = frappe.get_doc('Hosted Website', website_name)
+        base_path = doc.site_path
+
     full_path = os.path.join(base_path, file_path.lstrip('/'))
     
     # Security check
@@ -263,9 +298,14 @@ def read_file(website_name, file_path):
 @frappe.whitelist()
 def save_file(website_name, file_path, content):
     """Save file content (for text files)"""
-    doc = frappe.get_doc('Hosted Website', website_name)
-    
-    base_path = doc.site_path
+    if website_name == 'local_control_site':
+        if "System Manager" not in frappe.get_roles():
+            frappe.throw("Access Denied")
+        base_path = os.path.abspath(frappe.get_site_path())
+    else:
+        doc = frappe.get_doc('Hosted Website', website_name)
+        base_path = doc.site_path
+
     full_path = os.path.join(base_path, file_path.lstrip('/'))
     
     # Security check
