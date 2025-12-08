@@ -4,6 +4,8 @@
 import frappe
 from datetime import datetime
 import smtplib
+import subprocess
+import os
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
@@ -144,3 +146,77 @@ def clear_email_queue():
         return {'success': True, 'message': 'Email queue cleared'}
     except Exception as e:
         return {'success': False, 'error': str(e)}
+
+@frappe.whitelist()
+def generate_dkim_keys(domain, selector='default'):
+    """Generate DKIM keys for a domain using opendkim-genkey"""
+    try:
+        # Create directory for keys if it doesn't exist
+        key_dir = f"/etc/opendkim/keys/{domain}"
+        if not os.path.exists(key_dir):
+            # This might fail if not running as root/sudo. 
+            # In a real setup, we'd need a privileged helper or pre-created dirs.
+            # For now, we'll try to use a local directory if system dir fails
+            try:
+                os.makedirs(key_dir, exist_ok=True)
+            except PermissionError:
+                key_dir = os.path.join(frappe.get_site_path(), 'private', 'dkim', domain)
+                os.makedirs(key_dir, exist_ok=True)
+
+        # Generate keys
+        # opendkim-genkey -s selector -d domain -D directory
+        cmd = ['opendkim-genkey', '-s', selector, '-d', domain, '-D', key_dir]
+        subprocess.run(cmd, check=True)
+        
+        # Rename private key to standard name
+        os.rename(f"{key_dir}/{selector}.private", f"{key_dir}/dkim.private")
+        
+        # Read public key
+        with open(f"{key_dir}/{selector}.txt", 'r') as f:
+            public_key_content = f.read()
+            
+        # Extract the actual p= value from the file
+        # The file format is like: default._domainkey IN TXT "v=DKIM1; k=rsa; p=..."
+        import re
+        match = re.search(r'p=([^"]+)', public_key_content)
+        public_key_string = match.group(1) if match else ""
+
+        return {
+            'success': True,
+            'private_key_path': f"{key_dir}/dkim.private",
+            'public_key': public_key_string,
+            'selector': selector,
+            'dns_record': f"v=DKIM1; k=rsa; p={public_key_string}"
+        }
+
+    except Exception as e:
+        return {'success': False, 'error': str(e)}
+
+@frappe.whitelist()
+def get_spf_record(domain, ip_address=None):
+    """Generate SPF record for a domain"""
+    if not ip_address:
+        # Try to get server IP
+        import socket
+        try:
+            ip_address = socket.gethostbyname(socket.gethostname())
+        except:
+            ip_address = 'SERVER_IP'
+            
+    return {
+        'record_type': 'TXT',
+        'name': '@',
+        'value': f"v=spf1 a mx ip4:{ip_address} ~all"
+    }
+
+@frappe.whitelist()
+def get_dmarc_record(domain, policy='none', email=None):
+    """Generate DMARC record for a domain"""
+    if not email:
+        email = f"admin@{domain}"
+        
+    return {
+        'record_type': 'TXT',
+        'name': '_dmarc',
+        'value': f"v=DMARC1; p={policy}; rua=mailto:{email}"
+    }
