@@ -1,6 +1,3 @@
-# Copyright (c) 2025, Rokct Holdings and contributors
-# For license information, please see license.txt
-
 app_include_js = [
     "/assets/rpanel/js/hosting_branding.js",
     "/assets/rpanel/js/control_branding.js"
@@ -75,14 +72,14 @@ on_migrate = "rpanel.install.after_migrate"
 # ---------------
 
 scheduler_events = {
-    "daily": [
-        "rpanel.hosting.tasks.renew_expiring_ssl_certificates",
-        "rpanel.hosting.tasks.send_ssl_expiry_alerts",
-        "rpanel.hosting.tasks.cleanup_old_backups",
-        "rpanel.hosting.tasks.check_site_health"
+    "all": [
+        "rpanel.hosting.tasks.every_5_minutes"
     ],
     "hourly": [
-        "rpanel.hosting.tasks.run_scheduled_cron_jobs"
+        "rpanel.hosting.tasks.hourly"
+    ],
+    "daily": [
+        "rpanel.hosting.tasks.all"
     ]
 }
 
