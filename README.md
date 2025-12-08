@@ -86,6 +86,20 @@ RPanel is built to help you meet strict industry standards. While the software i
 - **GDPR Compliance:**
   - **Data Encryption (Art. 32):** Strong encryption for backups and SSL automation for data in transit.
 
+### 💻 System Requirements
+
+RPanel is a modern, feature-rich control panel. To run the full stack (Frappe, MariaDB, Redis, Nginx, Exim, ClamAV), you need a server with sufficient resources.
+
+| Resource | Minimum | Recommended |
+| :--- | :--- | :--- |
+| **OS** | Ubuntu 22.04 LTS | Ubuntu 22.04 LTS |
+| **RAM** | 4 GB | 8 GB+ |
+| **CPU** | 2 Cores | 4 Cores+ |
+| **Disk** | 40 GB SSD | 80 GB NVMe |
+
+> [!WARNING]
+> **ClamAV Memory Usage:** The antivirus scanner (ClamAV) alone requires ~3GB of RAM. If you have less than 8GB RAM, we recommend disabling ClamAV after installation to prevent OOM crashes.
+
 ## 💿 Installation
 
 RPanel can be installed in two ways: as a standalone control panel on a fresh server, or as an app on an existing Frappe Bench.
