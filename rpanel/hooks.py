@@ -88,6 +88,12 @@ scheduler_events = {
 
 # before_tests = "rpanel.install.before_tests"
 
+# Whitelisted Methods
+# -------------------
+whitelisted_methods = {
+    "rpanel.api.get_version": "rpanel.version.get_version"
+}
+
 # Overriding Methods
 # ------------------------------
 #
