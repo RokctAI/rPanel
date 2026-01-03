@@ -115,6 +115,14 @@ def check_and_install_system_dependencies():
         print(f"Error: Could not load dependencies.json: {str(e)}")
         return
     
+    # OVERRIDE: Force correct ModSecurity package for Ubuntu 24.04
+    # This ensures we use the correct package even if dependencies.json is reverted by update
+    if 'modsecurity' in dependencies:
+        dependencies['modsecurity'].update({
+            'check': "dpkg -l | grep -q libnginx-mod-http-modsecurity",
+            'install': "apt-get install -y libnginx-mod-http-modsecurity"
+        })
+    
     # Get MariaDB root password from common_site_config.json
     try:
         bench_path = frappe.utils.get_bench_path()
@@ -209,8 +217,11 @@ def setup_security_features():
     
     try:
         # Setup ModSecurity if installed
+        # Check for compiled module OR Ubuntu package
         result = subprocess.run('nginx -V 2>&1 | grep -q modsecurity', shell=True)
-        if result.returncode == 0:
+        pkg_result = subprocess.run('dpkg -l | grep -q libnginx-mod-http-modsecurity', shell=True)
+        
+        if result.returncode == 0 or pkg_result.returncode == 0:
             from rpanel.hosting.modsecurity_manager import setup_modsecurity
             setup_modsecurity()
             print("✓ ModSecurity WAF configured")
