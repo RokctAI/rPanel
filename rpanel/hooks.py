@@ -1,3 +1,10 @@
+app_name = "rpanel"
+app_title = "RPanel"
+app_publisher = "ROKCT INTELLIGENCE (PTY) LTD"
+app_description = "RPanel App for hosting"
+app_email = "admin@rokct.ai"
+app_license = "AGPL-3.0"
+
 app_include_js = [
     "/assets/rpanel/js/hosting_branding.js",
     "/assets/rpanel/js/control_branding.js"
