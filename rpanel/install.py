@@ -161,9 +161,36 @@ def check_and_install_system_dependencies():
             dep_info = dependencies[dep_name]
             print(f"{dep_name} is missing, installing...")
             try:
-                # Add sudo to the installation command
-                install_cmd = f"sudo {dep_info['install']}"
+                # Intelligent sudo injection for chained commands and pipes
+                cmd = dep_info['install']
+                
+                # Handle && chains - add sudo to each part
+                parts = cmd.split('&&')
+                sudo_parts = []
+                for part in parts:
+                    part = part.strip()
+                    # Handle pipes within parts
+                    if '|' in part:
+                        pipe_parts = part.split('|')
+                            # Add sudo after pipe if not present
+                        part = '|'.join([p if i==0 else f" sudo {p.strip()}" for i, p in enumerate(pipe_parts)])
+                    
+                    # Add sudo if not present (handling env as well)
+                    if not part.startswith('sudo'):
+                        sudo_parts.append(f"sudo {part}")
+                    else:
+                        sudo_parts.append(part)
+                
+                install_cmd = ' && '.join(sudo_parts)
+                
+                print(f"Executing: {install_cmd}")
                 subprocess.run(install_cmd, shell=True, check=True)
+                
+                # Special handling for packages that might start apache2
+                if dep_name in ['roundcube', 'phpmyadmin']:
+                    subprocess.run("sudo systemctl stop apache2 || true", shell=True)
+                    subprocess.run("sudo systemctl disable apache2 || true", shell=True)
+                    
                 print(f"✓ {dep_name} installed successfully\n")
             except Exception as e:
                 print(f"✗ Failed to install {dep_name}: {str(e)}")
