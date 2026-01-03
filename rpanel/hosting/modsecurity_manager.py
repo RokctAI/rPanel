@@ -28,8 +28,8 @@ class ModSecurityManager:
         Installs OWASP Core Rule Set and creates base configuration
         """
         # Create directories
-        self.modsec_dir.mkdir(parents=True, exist_ok=True)
-        self.rules_dir.mkdir(exist_ok=True)
+        subprocess.run(['sudo', 'mkdir', '-p', str(self.modsec_dir)], check=True)
+        subprocess.run(['sudo', 'mkdir', '-p', str(self.rules_dir)], check=True)
         
         # Download OWASP Core Rule Set if not exists
         if not self.crs_dir.exists():
@@ -54,20 +54,20 @@ class ModSecurityManager:
         ], check=True)
         
         subprocess.run([
-            'tar', 'xzf', '/tmp/crs.tar.gz',
+            'sudo', 'tar', 'xzf', '/tmp/crs.tar.gz',
             '-C', str(self.modsec_dir)
         ], check=True)
         
         # Rename to simpler name
         subprocess.run([
-            'mv',
+            'sudo', 'mv',
             str(self.modsec_dir / 'coreruleset-3.3.5'),
             str(self.crs_dir)
         ], check=True)
         
         # Copy setup file
         subprocess.run([
-            'cp',
+            'sudo', 'cp',
             str(self.crs_dir / 'crs-setup.conf.example'),
             str(self.crs_dir / 'crs-setup.conf')
         ], check=True)
@@ -129,10 +129,16 @@ Include /etc/nginx/modsec/rules/*.conf
 """
         
         config_file = self.modsec_dir / 'main.conf'
-        with open(config_file, 'w') as f:
-            f.write(config)
         
-        os.chmod(config_file, 0o644)
+        subprocess.run(
+            ['sudo', 'tee', str(config_file)],
+            input=config,
+            text=True,
+            check=True,
+            stdout=subprocess.DEVNULL
+        )
+        
+        subprocess.run(['sudo', 'chmod', '644', str(config_file)], check=True)
     
     def _create_rpanel_rules(self):
         """Create RPanel-specific ModSecurity rules"""
@@ -180,10 +186,16 @@ SecRule REQUEST_URI "@rx \\?author=[0-9]+" \\
 """
         
         rules_file = self.rules_dir / 'rpanel-custom.conf'
-        with open(rules_file, 'w') as f:
-            f.write(rules)
         
-        os.chmod(rules_file, 0o644)
+        subprocess.run(
+            ['sudo', 'tee', str(rules_file)],
+            input=rules,
+            text=True,
+            check=True,
+            stdout=subprocess.DEVNULL
+        )
+        
+        subprocess.run(['sudo', 'chmod', '644', str(rules_file)], check=True)
     
     def enable_for_website(self, domain):
         """
@@ -201,9 +213,15 @@ SecRule REQUEST_URI "@rx \\?author=[0-9]+" \\
         if not config_path.exists():
             frappe.throw(f"Nginx config not found for {domain}")
         
-        # Read current config
-        with open(config_path, 'r') as f:
-            config = f.read()
+        # Read current config (might need sudo if not owned by user)
+        # Using cat with sudo to be safe
+        result = subprocess.run(
+            ['sudo', 'cat', str(config_path)],
+            capture_output=True,
+            text=True,
+            check=True
+        )
+        config = result.stdout
         
         # Check if ModSecurity already enabled
         if 'modsecurity on' in config:
@@ -226,8 +244,14 @@ SecRule REQUEST_URI "@rx \\?author=[0-9]+" \\
                 new_lines.append(modsec_config)
         
         # Write updated config
-        with open(config_path, 'w') as f:
-            f.write('\n'.join(new_lines))
+        updated_content = '\n'.join(new_lines)
+        subprocess.run(
+            ['sudo', 'tee', str(config_path)],
+            input=updated_content,
+            text=True,
+            check=True,
+            stdout=subprocess.DEVNULL
+        )
         
         # Test and reload Nginx
         nginx_mgr.test_and_reload()
@@ -250,9 +274,14 @@ SecRule REQUEST_URI "@rx \\?author=[0-9]+" \\
         if not config_path.exists():
             frappe.throw(f"Nginx config not found for {domain}")
         
-        # Read current config
-        with open(config_path, 'r') as f:
-            config = f.read()
+        # Read current config with sudo
+        result = subprocess.run(
+            ['sudo', 'cat', str(config_path)],
+            capture_output=True,
+            text=True,
+            check=True
+        )
+        config = result.stdout
         
         # Remove ModSecurity directives
         lines = config.split('\n')
@@ -272,8 +301,14 @@ SecRule REQUEST_URI "@rx \\?author=[0-9]+" \\
                 new_lines.append(line)
         
         # Write updated config
-        with open(config_path, 'w') as f:
-            f.write('\n'.join(new_lines))
+        updated_content = '\n'.join(new_lines)
+        subprocess.run(
+            ['sudo', 'tee', str(config_path)],
+            input=updated_content,
+            text=True,
+            check=True,
+            stdout=subprocess.DEVNULL
+        )
         
         # Test and reload Nginx
         nginx_mgr.test_and_reload()
@@ -300,10 +335,16 @@ SecRule REQUEST_URI "@rx \\?author=[0-9]+" \\
         blocked = []
         
         try:
-            with open(audit_log, 'r') as f:
-                lines = f.readlines()
-                
-                for line in lines[-limit:]:
+            # Use sudo cat to read log as it might be owned by root
+            result = subprocess.run(
+                ['sudo', 'cat', audit_log],
+                capture_output=True,
+                text=True,
+                check=True
+            )
+            lines = result.stdout.splitlines()
+            
+            for line in lines[-limit:]:
                     if domain and domain not in line:
                         continue
                     
