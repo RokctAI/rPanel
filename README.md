@@ -296,6 +296,14 @@ We welcome contributions! RPanel is MIT Licensed and open source.
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
+
+## 🔌 Integration Guide
+
+Building a Billing System or Control Plane? Check out our **[Integration Examples](integration_examples/README.md)** for code snippets on:
+- Auto-installing RPanel
+- Syncing Quotas & Plans
+- Automating Provisioning
+
 ---
 
 **RPanel** - Hosting made simple, powerful, and open.

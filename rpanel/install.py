@@ -231,3 +231,24 @@ def setup_security_features():
         print(f"Warning: Failed to setup ModSecurity: {str(e)}")
     
     print("\n✓ System dependency installation complete")
+    
+    # Final check: Ensure Apache is dead and Nginx is alive
+    # This is critical because some packages (phpmyadmin/roundcube) might restart apache at the end of their install scripts
+    print("\n=== Verifying Web Server Status ===")
+    try:
+        print("Configuring Apache for safe coexistence (Port 8080)...")
+        # Change Listen 80 to Listen 8080 in ports.conf
+        subprocess.run(["sudo", "sed", "-i", "s/Listen 80/Listen 8080/g", "/etc/apache2/ports.conf"], check=False)
+        # Change <VirtualHost *:80> to <VirtualHost *:8080> in default site
+        subprocess.run(["sudo", "sed", "-i", "s/<VirtualHost \*:80>/<VirtualHost \*:8080>/g", "/etc/apache2/sites-available/000-default.conf"], check=False)
+        
+        print("Stopping Apache2 service...")
+        subprocess.run("sudo systemctl stop apache2 || true", shell=True)
+        subprocess.run("sudo systemctl disable apache2 || true", shell=True)
+        
+        print("Restarting Nginx service...")
+        subprocess.run("sudo systemctl restart nginx", shell=True, check=True)
+        print("✓ Nginx restarted successfully (Port 80 reclaimed)")
+    except Exception as e:
+        print(f"Warning: Could not restart Nginx: {e}")
+        print("Please run manually: sudo systemctl restart nginx")
