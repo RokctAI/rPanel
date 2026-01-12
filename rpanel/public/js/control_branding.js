@@ -4,8 +4,8 @@ frappe.ready(function () {
 });
 
 function applyControlBranding() {
-    const logoUrl = '/assets/rokct/images/logo.svg';
-    const logoDark = '/assets/rokct/images/logo_dark.svg';
+    const logoUrl = '/assets/control/images/logo.svg';
+    const logoDark = '/assets/control/images/logo_dark.svg';
     const appName = 'ROKCT Control';
 
     setTimeout(function () {

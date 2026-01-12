@@ -7,6 +7,9 @@ on:
 jobs:
   enable-automerge:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
     env:
       # GitHub usernames allowed to have their PRs auto‑merged (comma‑separated)
       ALLOWED_USERS: "sinya,RendaniSinyage,nurudinso"
@@ -14,7 +17,7 @@ jobs:
       LEAD_DEVELOPER: "RendaniSinyage"
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v3
 
       - name: Check if PR changes versions.json
         id: check_version_file
@@ -77,5 +80,6 @@ jobs:
         uses: peter-evans/enable-pull-request-automerge@v2
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
+          pull-request-number: ${{ github.event.pull_request.number }}
           # Choose merge method: squash, merge, or rebase
           merge-method: squash

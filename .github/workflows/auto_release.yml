@@ -24,7 +24,7 @@ jobs:
           echo "✅ Authorized user: $AUTHOR"
 
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v3
         with:
           fetch-depth: 0  # Fetch all history for release notes
 
@@ -61,10 +61,10 @@ jobs:
 
       - name: Create GitHub Release
         if: steps.check_tag.outputs.exists == 'false'
-        uses: actions/create-release@v1
+        uses: softprops/action-gh-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: v${{ steps.get_version.outputs.version }}
-          release_name: "v${{ steps.get_version.outputs.version }}"
+          name: "v${{ steps.get_version.outputs.version }}"
           generate_release_notes: true
