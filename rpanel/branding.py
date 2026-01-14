@@ -27,7 +27,7 @@ def boot_session(bootinfo):
     bootinfo.sysdefaults.app_title = "RPanel"
     bootinfo.sysdefaults.app_logo_url = "/assets/rpanel/images/rpanel_logo.svg"
 
-def get_client_branding():
+def get_client_branding(bootinfo):
     """
     Get branding for client portal
     """
