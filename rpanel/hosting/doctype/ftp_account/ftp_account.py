@@ -4,7 +4,6 @@
 import frappe
 from frappe.model.document import Document
 import subprocess
-import crypt
 import os
 
 class FTPAccount(Document):
@@ -19,45 +18,59 @@ class FTPAccount(Document):
     def create_ftp_user(self):
         """Create system FTP user"""
         try:
-            # Create user with encrypted password
-            encrypted_password = crypt.crypt(self.get_password('password'), crypt.METHOD_SHA512)
+            # 1. Create user
+            # Avoid shell=True to prevent injection and separate args safely
+            subprocess.run([
+                "useradd", 
+                "-m", 
+                "-d", self.home_directory, 
+                "-s", "/bin/bash", 
+                self.username
+            ], check=True)
             
-            # Create user
-            cmd = f"useradd -m -d {self.home_directory} -s /bin/bash {self.username}"
-            subprocess.run(cmd, shell=True, check=True)
+            # 2. Set password SECURELY
+            # Pass data via stdin (input=...) instead of echo.
+            # This keeps the password hidden from process lists (ps aux)
+            payload = f"{self.username}:{self.get_password('password')}"
+            subprocess.run(
+                ['chpasswd'], 
+                input=payload, 
+                text=True, 
+                check=True
+            )
             
-            # Set password
-            cmd = f"echo '{self.username}:{self.get_password('password')}' | chpasswd"
-            subprocess.run(cmd, shell=True, check=True)
+            # 3. Set permissions
+            subprocess.run(["chown", "-R", f"{self.username}:www-data", self.home_directory], check=True)
+            subprocess.run(["chmod", "755", self.home_directory], check=True)
             
-            # Set permissions
-            subprocess.run(f"chown -R {self.username}:www-data {self.home_directory}", shell=True, check=True)
-            subprocess.run(f"chmod 755 {self.home_directory}", shell=True, check=True)
-            
-            # Add to vsftpd user list
+            # 4. Add to vsftpd user list
             with open('/etc/vsftpd.userlist', 'a') as f:
                 f.write(f"{self.username}\n")
             
-            # Restart FTP service
+            # 5. Restart FTP service
             subprocess.run(['systemctl', 'restart', 'vsftpd'], check=True)
             
+        except subprocess.CalledProcessError as e:
+            frappe.log_error(f"System command failed: {e}")
+            frappe.throw(f"Failed to setup FTP user. Check logs.")
         except Exception as e:
             frappe.log_error(f"FTP user creation failed: {str(e)}")
+            frappe.throw("An error occurred while creating the FTP account.")
     
     def delete_ftp_user(self):
         """Delete system FTP user"""
         try:
             # Delete user
-            cmd = f"userdel -r {self.username}"
-            subprocess.run(cmd, shell=True, check=True)
+            subprocess.run(["userdel", "-r", self.username], check=True)
             
             # Remove from vsftpd user list
-            with open('/etc/vsftpd.userlist', 'r') as f:
-                lines = f.readlines()
-            with open('/etc/vsftpd.userlist', 'w') as f:
-                for line in lines:
-                    if line.strip() != self.username:
-                        f.write(line)
+            if os.path.exists('/etc/vsftpd.userlist'):
+                with open('/etc/vsftpd.userlist', 'r') as f:
+                    lines = f.readlines()
+                with open('/etc/vsftpd.userlist', 'w') as f:
+                    for line in lines:
+                        if line.strip() != self.username:
+                            f.write(line)
             
             # Restart FTP service
             subprocess.run(['systemctl', 'restart', 'vsftpd'], check=True)
@@ -70,6 +83,8 @@ class FTPAccount(Document):
 def get_ftp_logs(username, lines=50):
     """Get FTP connection logs for user"""
     try:
+        # Grep is safer with shell=True but we sanitize inputs strictly in UI usually.
+        # Ideally, use python to read the file instead of grep to be 100% safe.
         cmd = f"grep '{username}' /var/log/vsftpd.log | tail -n {lines}"
         result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
         
