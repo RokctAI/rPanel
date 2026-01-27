@@ -340,11 +340,11 @@ require_once ABSPATH . 'wp-settings.php';
     }}
 """
 
-        config_content = f"""
+        config_content = r"""
 server {{
     {listen_block}
-    server_name {self.domain} www.{self.domain};
-    root {self.site_path};
+    server_name {domain} www.{domain};
+    root {site_path};
     index index.php index.html index.htm;
 
     {ssl_block}
@@ -380,7 +380,7 @@ server {{
         rewrite /webmail/(.*) /webmail/index.php?_url=/$1;
     }}
 }}
-"""
+""".format(listen_block=listen_block, domain=self.domain, site_path=self.site_path, ssl_block=ssl_block, php_socket=php_socket)
         # Write to temp then move
         # Use /tmp/ to avoid polluting app dir
         temp_conf = f"/tmp/nginx_{self.name}.conf"
