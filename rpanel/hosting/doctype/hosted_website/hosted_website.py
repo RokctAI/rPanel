@@ -9,9 +9,16 @@ import shutil
 import re
 import time
 from rpanel.hosting.utils import run_certbot, update_exim_config
+from rpanel.hosting.mysql_utils import run_mysql_command
+from rpanel.hosting.system_user_manager import SystemUserManager
+from rpanel.hosting.php_fpm_manager import PHPFPMManager
 
 class HostedWebsite(Document):
     def validate(self):
+        # 0. Check client quota (before creating new site)
+        if self.is_new():
+            self.check_client_quota()
+        
         # 1. Strict Domain Validation (Security)
         # Allow lowercase, numbers, dots, hyphens. No spaces, no semicolons.
         if not re.match(r'^[a-z0-9.-]+$', self.domain):
@@ -42,6 +49,30 @@ class HostedWebsite(Document):
                 frappe.throw("Database Name can only contain alphanumeric characters and underscores.")
             if not re.match(r'^[a-zA-Z0-9_]+$', self.db_user):
                 frappe.throw("Database User can only contain alphanumeric characters and underscores.")
+    
+    def check_client_quota(self):
+        """Check if client has exceeded their website quota"""
+        if not self.client:
+            return  # No client assigned, skip quota check
+        
+        # Get client document
+        client = frappe.get_doc("Hosting Client", self.client)
+        
+        # Count existing websites for this client
+        existing_count = frappe.db.count("Hosted Website", {
+            "client": self.client,
+            "name": ["!=", self.name]  # Exclude current site if updating
+        })
+        
+        # Check against limit
+        if hasattr(client, 'max_websites') and client.max_websites:
+            if existing_count >= client.max_websites:
+                frappe.throw(
+                    f"Website quota exceeded. Your plan allows {client.max_websites} website(s). "
+                    f"You currently have {existing_count} website(s). "
+                    f"Please upgrade your plan to create more websites.",
+                    title="Quota Exceeded"
+                )
 
     def after_insert(self):
         if self.status == "Active":
@@ -83,6 +114,24 @@ class HostedWebsite(Document):
             return
 
         try:
+            # 0. Create/verify system user and increment reference count
+            user_mgr = SystemUserManager()
+            if not user_mgr.user_exists(self.system_user):
+                user_mgr.create_user(self.system_user)
+                frappe.msgprint(f"Created Linux user: {self.system_user}")
+            user_mgr.increment_user_reference(self.system_user, self.domain)
+            
+            # 0b. Create PHP-FPM pool if using PHP-FPM mode
+            if self.php_mode == "PHP-FPM":
+                php_mgr = PHPFPMManager(self.php_version)
+                socket_path = php_mgr.create_pool(
+                    domain=self.domain,
+                    system_user=self.system_user,
+                    max_children=5
+                )
+                # Store socket path for nginx config
+                self.php_fpm_socket = socket_path
+            
             # 1. Create Directory
             if not os.path.exists(self.site_path):
                 subprocess.run(["sudo", "mkdir", "-p", self.site_path], check=True)
@@ -93,8 +142,8 @@ class HostedWebsite(Document):
                         f.write(f"<h1>Welcome to {self.domain}</h1><p>Hosted by ROKCT</p>")
                     subprocess.run(["sudo", "mv", "temp_index.html", index_file], check=True)
 
-                # Set permissions
-                subprocess.run(["sudo", "chown", "-R", "www-data:www-data", self.site_path], check=True)
+                # Set permissions to system user
+                subprocess.run(["sudo", "chown", "-R", f"{self.system_user}:www-data", self.site_path], check=True)
                 subprocess.run(["sudo", "chmod", "-R", "755", self.site_path], check=True)
 
             # 2. Nginx Config
@@ -257,6 +306,14 @@ require_once ABSPATH . 'wp-settings.php';
     def update_nginx_config(self, ssl=False):
         """Generates and reloads Nginx config"""
         config_path = f"/etc/nginx/conf.d/{self.domain}.conf"
+        
+        # Determine which PHP-FPM socket to use
+        # Use dedicated socket if available (for isolated pools), otherwise default
+        if hasattr(self, 'php_fpm_socket') and self.php_fpm_socket:
+            php_socket = self.php_fpm_socket
+        else:
+            # Fallback to default socket (for backwards compatibility)
+            php_socket = f"/run/php/php{self.php_version}-fpm.sock"
 
         listen_block = "listen 80;"
         ssl_block = ""
@@ -298,7 +355,7 @@ server {{
 
     location ~ \.php$ {{
         include snippets/fastcgi-php.conf;
-        fastcgi_pass unix:/run/php/php{self.php_version}-fpm.sock;
+        fastcgi_pass unix:{php_socket};
     }}
 
     # Deny access to .htaccess
@@ -314,7 +371,7 @@ server {{
 
         location ~ \.php$ {{
             include snippets/fastcgi-php.conf;
-            fastcgi_pass unix:/run/php/php{self.php_version}-fpm.sock;
+            fastcgi_pass unix:{php_socket};
             fastcgi_param SCRIPT_FILENAME $request_filename;
         }}
     }}
@@ -362,15 +419,21 @@ server {{
             self.db_update()
 
         try:
-            # Create DB
+            # Create DB - No password needed for DB creation
             subprocess.run(["sudo", "mysql", "-e", f"CREATE DATABASE IF NOT EXISTS `{self.db_name}`;"], check=True)
 
-            # Create User
-            subprocess.run(["sudo", "mysql", "-e", f"CREATE USER IF NOT EXISTS '{self.db_user}'@'localhost' IDENTIFIED BY '{self.db_password}';"], check=True)
+            # Create User - Secure: Password hidden from process list via temp config file
+            run_mysql_command(
+                sql=f"CREATE USER IF NOT EXISTS '{self.db_user}'@'localhost' IDENTIFIED BY '{self.db_password}';",
+                as_sudo=True
+            )
 
             # Grant Privileges
-            subprocess.run(["sudo", "mysql", "-e", f"GRANT ALL PRIVILEGES ON `{self.db_name}`.* TO '{self.db_user}'@'localhost';"], check=True)
-            subprocess.run(["sudo", "mysql", "-e", "FLUSH PRIVILEGES;"], check=True)
+            run_mysql_command(
+                sql=f"GRANT ALL PRIVILEGES ON `{self.db_name}`.* TO '{self.db_user}'@'localhost';",
+                as_sudo=True
+            )
+            run_mysql_command(sql="FLUSH PRIVILEGES;", as_sudo=True)
 
         except subprocess.CalledProcessError as e:
              frappe.log_error(f"Database setup failed: {e}")
@@ -378,6 +441,23 @@ server {{
     def deprovision_site(self):
         """Removes config and (optionally) data"""
         try:
+            # Remove PHP-FPM pool if exists
+            if hasattr(self, 'php_fpm_socket') and self.php_fpm_socket:
+                php_mgr = PHPFPMManager(self.php_version)
+                php_mgr.delete_pool(self.domain)
+            
+            # Decrement user reference count and delete if no other sites use it
+            user_mgr = SystemUserManager()
+            user_mgr.decrement_user_reference(self.system_user, self.domain)
+            
+            remaining_sites = user_mgr.get_user_reference_count(self.system_user)
+            if remaining_sites == 0:
+                # No other sites use this user, safe to delete
+                frappe.msgprint(f"No other sites use {self.system_user}, removing user...")
+                user_mgr.delete_user(self.system_user)
+            else:
+                frappe.msgprint(f"User {self.system_user} still used by {remaining_sites} other site(s), preserving...")
+            
             # Remove Nginx config
             config_path = f"/etc/nginx/conf.d/{self.domain}.conf"
             if os.path.exists(config_path):
