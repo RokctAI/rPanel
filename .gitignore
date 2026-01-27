@@ -1,14 +1,46 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
 *.pyc
 *.pyo
-__pycache__/
-.DS_Store
+*.so
+.Python
+
+# Virtual environments
+venv/
+env/
+ENV/
+
+# IDE
+.vscode/
+.idea/
 *.swp
 *.swo
 *~
-.vscode/
-.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build artifacts
 *.egg-info/
 dist/
 build/
 node_modules/
+
+# Frappe specific
+*.compiled
+.build/
+sites/*/private/backups/
+sites/*/private/files/
+sites/*/locks/
+sites/*/task-logs/
+sites/assets/
+
+# Logs
+*.log
+logs/
+
+# Git (redundant but explicit)
 .git/
