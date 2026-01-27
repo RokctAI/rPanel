@@ -5,6 +5,7 @@ import frappe
 import os
 import subprocess
 import shlex
+from rpanel.hosting.mysql_utils import run_mysql_command
 
 @frappe.whitelist()
 def import_wordpress(website_name, source_path):
@@ -62,15 +63,19 @@ def search_replace_db(website_name, search, replace):
         if result.returncode == 0:
             return {'success': True, 'output': result.stdout}
         else:
-            # Fallback to manual SQL
+            # Fallback to manual SQL - Secure: password hidden from process list
             sql = f"""
             UPDATE wp_options SET option_value = REPLACE(option_value, '{search}', '{replace}');
             UPDATE wp_posts SET post_content = REPLACE(post_content, '{search}', '{replace}');
             UPDATE wp_postmeta SET meta_value = REPLACE(meta_value, '{search}', '{replace}');
             """
             
-            cmd = f"mysql -u {website.db_user} -p{website.db_password} {website.db_name} -e \"{sql}\""
-            subprocess.run(cmd, shell=True, check=True)
+            run_mysql_command(
+                sql=sql,
+                database=website.db_name,
+                user=website.db_user,
+                password=website.db_password
+            )
             
             return {'success': True, 'message': 'Search/replace completed'}
     except Exception as e:
