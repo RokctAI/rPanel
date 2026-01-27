@@ -7,6 +7,7 @@ import os
 import subprocess
 import shlex
 from datetime import datetime
+from rpanel.hosting.mysql_utils import run_mysql_command, run_mysqldump, run_mysql_restore
 
 class StagingEnvironment(Document):
     pass
@@ -150,17 +151,24 @@ def delete_staging(staging_name):
 def create_staging_database(prod_db, staging_db, db_user, db_password):
     """Create staging database from production"""
     # Create database
-    cmd = f"mysql -u root -e 'CREATE DATABASE IF NOT EXISTS {staging_db}'"
-    subprocess.run(cmd, shell=True, check=True)
+    run_mysql_command(f"CREATE DATABASE IF NOT EXISTS {staging_db}", as_sudo=True)
     
-    # Dump production database
+    # Dump production database - Secure: password hidden
     dump_file = f"/tmp/{prod_db}_staging.sql"
-    cmd = f"mysqldump -u {db_user} -p{db_password} {prod_db} > {dump_file}"
-    subprocess.run(cmd, shell=True, check=True)
+    run_mysqldump(
+        database=prod_db,
+        output_file=dump_file,
+        user=db_user,
+        password=db_password
+    )
     
-    # Import to staging database
-    cmd = f"mysql -u {db_user} -p{db_password} {staging_db} < {dump_file}"
-    subprocess.run(cmd, shell=True, check=True)
+    # Import to staging database - Secure: password hidden
+    run_mysql_restore(
+        database=staging_db,
+        input_file=dump_file,
+        user=db_user,
+        password=db_password
+    )
     
     # Clean up
     os.remove(dump_file)
@@ -170,21 +178,28 @@ def sync_staging_database(source_db, target_db):
     """Sync database from source to target"""
     dump_file = f"/tmp/{source_db}_sync.sql"
     
-    # Dump source
-    cmd = f"mysqldump -u root {source_db} > {dump_file}"
-    subprocess.run(cmd, shell=True, check=True)
+    # Dump source - Using root without password (assumes auth configured)
+    run_mysqldump(
+        database=source_db,
+        output_file=dump_file,
+        user="root",
+        as_sudo=True
+    )
     
     # Import to target
-    cmd = f"mysql -u root {target_db} < {dump_file}"
-    subprocess.run(cmd, shell=True, check=True)
+    run_mysql_restore(
+        database=target_db,
+        input_file=dump_file,
+        user="root",
+        as_sudo=True
+    )
     
     os.remove(dump_file)
 
 
 def drop_staging_database(staging_db):
     """Drop staging database"""
-    cmd = f"mysql -u root -e 'DROP DATABASE IF EXISTS {staging_db}'"
-    subprocess.run(cmd, shell=True, check=True)
+    run_mysql_command(f"DROP DATABASE IF EXISTS {staging_db}", as_sudo=True)
 
 
 def create_staging_nginx_config(staging_url, staging_path, php_version):
