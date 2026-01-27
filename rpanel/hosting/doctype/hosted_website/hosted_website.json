@@ -18,6 +18,7 @@
         "admin_email",
         "aliases",
         "site_path",
+        "php_fpm_socket",
         "column_break_1",
         "ssl_status",
         "ssl_expiry",
@@ -109,6 +110,14 @@
             "fieldtype": "Data",
             "label": "Site Path",
             "read_only": 1
+        },
+        {
+            "fieldname": "php_fpm_socket",
+            "fieldtype": "Data",
+            "label": "PHP-FPM Socket",
+            "description": "Unix socket path for PHP-FPM pool",
+            "read_only": 1,
+            "depends_on": "eval:doc.php_mode=='PHP-FPM'"
         },
         {
             "fieldname": "column_break_1",
