@@ -5,6 +5,8 @@ import frappe
 from rpanel.hosting.nginx_manager import NginxManager
 from rpanel.hosting.git_manager import clone_repository, pull_latest
 from rpanel.hosting.database_manager import execute_query, get_tables
+from rpanel.hosting.system_user_manager import SystemUserManager
+from rpanel.hosting.email_manager import generate_dkim_keys, get_spf_record
 
 class TestNginxManager(unittest.TestCase):
     def setUp(self):
@@ -136,3 +138,79 @@ class TestDatabaseManager(unittest.TestCase):
         
         self.assertTrue(result['success'])
         self.assertEqual(result['tables'], ["table1", "table2"])
+
+class TestSystemUserManager(unittest.TestCase):
+    def setUp(self):
+        self.manager = SystemUserManager()
+        self.username = "testuser"
+
+    @patch('rpanel.hosting.system_user_manager.subprocess.run')
+    def test_user_exists(self, mock_run):
+        """Test user existence check"""
+        mock_run.return_value = MagicMock(returncode=0) # User exists
+        self.assertTrue(self.manager.user_exists(self.username))
+        
+        mock_run.return_value = MagicMock(returncode=1) # User does not exist
+        self.assertFalse(self.manager.user_exists(self.username))
+
+    @patch('rpanel.hosting.system_user_manager.subprocess.run')
+    @patch('rpanel.hosting.system_user_manager.SystemUserManager.user_exists')
+    def test_create_user(self, mock_exists, mock_run):
+        """Test user creation with limited privileges"""
+        mock_exists.return_value = False
+        
+        self.manager.create_user(self.username)
+        
+        # Verify useradd args
+        found_useradd = False
+        for call in mock_run.call_args_list:
+            args = call[0][0]
+            if 'useradd' in args and '/bin/false' in args:
+                found_useradd = True
+                break
+        self.assertTrue(found_useradd, "Should create user with no shell")
+
+    @patch('rpanel.hosting.system_user_manager.subprocess.run')
+    @patch('rpanel.hosting.system_user_manager.SystemUserManager.user_exists')
+    def test_delete_user(self, mock_exists, mock_run):
+        """Test user deletion"""
+        mock_exists.return_value = True
+        
+        self.manager.delete_user(self.username)
+        
+        # Verify userdel called
+        found_del = False
+        for call in mock_run.call_args_list:
+            args = call[0][0]
+            if 'userdel' in args and self.username in args:
+                found_del = True
+                break
+        self.assertTrue(found_del)
+
+class TestEmailManager(unittest.TestCase):
+    @patch('rpanel.hosting.email_manager.subprocess.run')
+    @patch('rpanel.hosting.email_manager.os.path.exists')
+    @patch('rpanel.hosting.email_manager.os.makedirs')
+    @patch('rpanel.hosting.email_manager.os.rename')
+    @patch('builtins.open', new_callable=mock_open, read_data='p=MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQ')
+    def test_generate_dkim_keys(self, mock_file, mock_rename, mock_makedirs, mock_exists, mock_run):
+        """Test DKIM key generation"""
+        mock_exists.return_value = False 
+        
+        result = generate_dkim_keys("test.com")
+        
+        self.assertTrue(result['success'])
+        mock_run.assert_called() # Verify opendkim-genkey called
+        self.assertEqual(result['public_key'], "MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQ")
+
+    def test_get_spf_record(self):
+        """Test SPF record generation"""
+        # Test with provided IP
+        record = get_spf_record("test.com", "1.2.3.4")
+        self.assertIn("ip4:1.2.3.4", record['value'])
+        
+        # Test with default (mocking socket would be needed to be precise, but structure check is enough)
+        with patch('socket.gethostbyname') as mock_ip:
+            mock_ip.return_value = "127.0.0.1"
+            record = get_spf_record("test.com")
+            self.assertIn("ip4:127.0.0.1", record['value'])
