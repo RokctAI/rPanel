@@ -1,6 +1,6 @@
 
 import unittest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch, MagicMock, mock_open
 import frappe
 # Import the module to test. Note: This assumes rpanel is in python path or installed in bench
 from rpanel.hosting.doctype.hosted_website.hosted_website import HostedWebsite
@@ -39,14 +39,20 @@ class TestHostedWebsite(unittest.TestCase):
 
     @patch('rpanel.hosting.doctype.hosted_website.hosted_website.SystemUserManager')
     @patch('rpanel.hosting.doctype.hosted_website.hosted_website.PHPFPMManager')
-    @patch('rpanel.hosting.doctype.hosted_website.hosted_website.NginxManager') # Note: HostedWebsite instantiates this internally in update_nginx_config if not mocked directly
     @patch('rpanel.hosting.doctype.hosted_website.hosted_website.subprocess.run')
     @patch('rpanel.hosting.doctype.hosted_website.hosted_website.os.path.exists')
     @patch('rpanel.hosting.doctype.hosted_website.hosted_website.run_mysql_command')
-    def test_provision_site_success(self, mock_mysql, mock_exists, mock_run, MockNginx, MockPHP, MockUser):
+    @patch('rpanel.hosting.doctype.hosted_website.hosted_website.run_certbot')
+    @patch('rpanel.hosting.doctype.hosted_website.hosted_website.update_exim_config')
+    @patch('builtins.open', new_callable=mock_open)
+    def test_provision_site_success(self, mock_file, mock_exim, mock_certbot, mock_mysql, mock_exists, mock_run, MockPHP, MockUser):
         """Test successful site provisioning for a CMS"""
         # Setup mocks
         mock_exists.return_value = False # Directory doesn't exist yet
+        mock_run.return_value.returncode = 0 # Success for check=True
+        mock_certbot.return_value = (True, "Cert issued")
+        mock_exim.return_value = (True, "Exim updated")
+
         mock_user_instance = MockUser.return_value
         mock_user_instance.user_exists.return_value = False
         
