@@ -8,6 +8,7 @@ import subprocess
 import shlex
 from datetime import datetime
 from rpanel.hosting.mysql_utils import run_mysql_command, run_mysqldump, run_mysql_restore
+from rpanel.hosting.service_intelligence import ServiceIntelligence
 
 class StagingEnvironment(Document):
     pass
@@ -216,7 +217,7 @@ server {{
     }}
     
     location ~ \\.php$ {{
-        fastcgi_pass unix:/run/php/php{php_version}-fpm.sock;
+        fastcgi_pass unix:{ServiceIntelligence.get_php_fpm_socket(php_version)};
         fastcgi_index index.php;
         include fastcgi_params;
         fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
