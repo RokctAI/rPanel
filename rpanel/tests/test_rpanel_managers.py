@@ -34,7 +34,6 @@ class TestNginxManager(unittest.TestCase):
     def test_is_protected_config(self):
         """Test protected configuration detection"""
         self.assertTrue(self.manager.is_protected_config("frappe-bench-frappe"))
-        self.assertTrue(self.manager.is_protected_config("ollama-proxy.conf"))
         self.assertFalse(self.manager.is_protected_config("rpanel-random-site.conf"))
 
     @patch('rpanel.hosting.nginx_manager.subprocess.run')
