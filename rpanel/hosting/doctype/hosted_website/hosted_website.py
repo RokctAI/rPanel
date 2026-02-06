@@ -12,12 +12,17 @@ from rpanel.hosting.utils import run_certbot, update_exim_config
 from rpanel.hosting.mysql_utils import run_mysql_command
 from rpanel.hosting.system_user_manager import SystemUserManager
 from rpanel.hosting.php_fpm_manager import PHPFPMManager
+from rpanel.hosting.postgres_utils import create_pg_database, run_psql_command
 
 class HostedWebsite(Document):
     def validate(self):
         # 0. Check client quota (before creating new site)
         if self.is_new():
             self.check_client_quota()
+        
+        # 0b. Default DB Engine
+        if not self.db_engine:
+            self.db_engine = "PostgreSQL"
         
         # 1. Strict Domain Validation (Security)
         # Allow lowercase, numbers, dots, hyphens. No spaces, no semicolons.
@@ -96,7 +101,7 @@ class HostedWebsite(Document):
             if self.site_type == "CMS" and self.cms_type == "WordPress":
                 # Check if we just switched to CMS or if DB details are missing/changed
                 # Robustness: Just try to run setup. It checks if exists internally.
-                if self.has_value_changed("site_type") or self.has_value_changed("cms_type"):
+                if self.has_value_changed("site_type") or self.has_value_changed("cms_type") or self.has_value_changed("db_engine"):
                     self.setup_database()
                     self.install_wordpress()
         
@@ -243,6 +248,10 @@ class HostedWebsite(Document):
             # 2. Generate wp-config.php
             self.generate_wp_config()
             
+            # 2b. Setup PostgreSQL bridge (if needed)
+            if self.db_engine == "PostgreSQL":
+                self.setup_wordpress_postgres_bridge()
+            
             # 3. Permissions
             subprocess.run(["sudo", "chown", "-R", "www-data:www-data", self.site_path], check=True)
             
@@ -286,6 +295,41 @@ require_once ABSPATH . 'wp-settings.php';
             f.write(config)
 
         subprocess.run(["sudo", "mv", temp_config, os.path.join(self.site_path, "wp-config.php")], check=True)
+
+    def setup_wordpress_postgres_bridge(self):
+        """Install PG4WP bridge for WordPress on PostgreSQL"""
+        frappe.msgprint("Setting up PostgreSQL bridge for WordPress...")
+        try:
+            # 1. Download PG4WP
+            # We can use a pre-installed version on the server or download it.
+            # For now, let's assume we maintain a cached copy in /var/lib/rpanel/plugins/
+            bridge_source = "/var/lib/rpanel/plugins/pg4wp"
+            if not os.path.exists(bridge_source):
+                # Download if missing
+                subprocess.run([
+                    "sudo", "git", "clone", "https://github.com/wp-plugins/postgresql-for-wordpress.git", 
+                    bridge_source
+                ], check=True)
+            
+            # 2. Copy db.php to wp-content/
+            wp_content = os.path.join(self.site_path, "wp-content")
+            subprocess.run(["sudo", "mkdir", "-p", wp_content], check=True)
+            subprocess.run([
+                "sudo", "cp", os.path.join(bridge_source, "pg4wp/db.php"), 
+                os.path.join(wp_content, "db.php")
+            ], check=True)
+            
+            # 3. Copy pg4wp directory to wp-content/
+            subprocess.run([
+                "sudo", "cp", "-r", os.path.join(bridge_source, "pg4wp"), 
+                wp_content
+            ], check=True)
+            
+            frappe.msgprint("PostgreSQL bridge configured")
+            
+        except Exception as e:
+            frappe.log_error(f"WP PG Bridge Failed: {e}")
+            frappe.msgprint(f"Warning: Failed to setup PG bridge. WordPress might not connect. {e}")
 
     def issue_ssl(self):
         # Webroot must exist first
@@ -409,8 +453,8 @@ server {{
              frappe.msgprint(f"Email Update Warning: {msg}")
 
     def setup_database(self):
-        """Creates MySQL database and user"""
-        # Double check validation here as a failsafe
+        """Creates database and user based on engine"""
+        # Double check validation
         if not re.match(r'^[a-zA-Z0-9_]+$', self.db_name) or not re.match(r'^[a-zA-Z0-9_]+$', self.db_user):
              frappe.throw("Invalid Database Name or User")
 
@@ -419,24 +463,36 @@ server {{
             self.db_update()
 
         try:
-            # Create DB - No password needed for DB creation
-            subprocess.run(["sudo", "mysql", "-e", f"CREATE DATABASE IF NOT EXISTS `{self.db_name}`;"], check=True)
+            if self.db_engine == "MariaDB":
+                self.setup_mariadb()
+            else:
+                self.setup_postgresql()
 
-            # Create User - Secure: Password hidden from process list via temp config file
-            run_mysql_command(
-                sql=f"CREATE USER IF NOT EXISTS '{self.db_user}'@'localhost' IDENTIFIED BY '{self.db_password}';",
-                as_sudo=True
-            )
-
-            # Grant Privileges
-            run_mysql_command(
-                sql=f"GRANT ALL PRIVILEGES ON `{self.db_name}`.* TO '{self.db_user}'@'localhost';",
-                as_sudo=True
-            )
-            run_mysql_command(sql="FLUSH PRIVILEGES;", as_sudo=True)
-
-        except subprocess.CalledProcessError as e:
+        except Exception as e:
              frappe.log_error(f"Database setup failed: {e}")
+             frappe.throw(f"Failed to setup {self.db_engine} database: {e}")
+
+    def setup_mariadb(self):
+        """Specific MariaDB setup logic"""
+        # Create DB
+        subprocess.run(["sudo", "mysql", "-e", f"CREATE DATABASE IF NOT EXISTS `{self.db_name}`;"], check=True)
+
+        # Create User
+        run_mysql_command(
+            sql=f"CREATE USER IF NOT EXISTS '{self.db_user}'@'localhost' IDENTIFIED BY '{self.db_password}';",
+            as_sudo=True
+        )
+
+        # Grant Privileges
+        run_mysql_command(
+            sql=f"GRANT ALL PRIVILEGES ON `{self.db_name}`.* TO '{self.db_user}'@'localhost';",
+            as_sudo=True
+        )
+        run_mysql_command(sql="FLUSH PRIVILEGES;", as_sudo=True)
+
+    def setup_postgresql(self):
+        """Specific PostgreSQL setup logic"""
+        create_pg_database(self.db_name, self.db_user, self.db_password)
 
     def deprovision_site(self):
         """Removes config and (optionally) data"""
