@@ -6,6 +6,7 @@ import os
 import subprocess
 import shlex
 from rpanel.hosting.mysql_utils import run_mysql_command
+from rpanel.hosting.postgres_utils import run_psql_command
 
 @frappe.whitelist()
 def import_wordpress(website_name, source_path):
@@ -70,12 +71,21 @@ def search_replace_db(website_name, search, replace):
             UPDATE wp_postmeta SET meta_value = REPLACE(meta_value, '{search}', '{replace}');
             """
             
-            run_mysql_command(
-                sql=sql,
-                database=website.db_name,
-                user=website.db_user,
-                password=website.db_password
-            )
+            if website.db_engine == "MariaDB":
+                run_mysql_command(
+                    sql=sql,
+                    database=website.db_name,
+                    user=website.db_user,
+                    password=website.db_password
+                )
+            else:
+                # PostgreSQL
+                run_psql_command(
+                    sql=sql,
+                    database=website.db_name,
+                    user=website.db_user,
+                    password=website.db_password
+                )
             
             return {'success': True, 'message': 'Search/replace completed'}
     except Exception as e:
