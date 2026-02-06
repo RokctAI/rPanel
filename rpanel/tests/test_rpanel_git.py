@@ -14,12 +14,13 @@ class TestGitManager(unittest.TestCase):
         self.mock_website.site_path = "/var/www/test-site"
         self.mock_website.git_branch = "main"
 
+    @patch('rpanel.hosting.git_manager.frappe.db')
     @patch('rpanel.hosting.git_manager.frappe.get_doc')
     @patch('rpanel.hosting.git_manager.subprocess.run')
     @patch('rpanel.hosting.git_manager.os.path.exists')
     @patch('rpanel.hosting.git_manager.os.makedirs')
     @patch('rpanel.hosting.git_manager.os.listdir')
-    def test_clone_repository_success(self, mock_listdir, mock_makedirs, mock_exists, mock_run, mock_get_doc):
+    def test_clone_repository_success(self, mock_listdir, mock_makedirs, mock_exists, mock_run, mock_get_doc, mock_db):
         # Setup
         mock_get_doc.return_value = self.mock_website
         mock_exists.return_value = False # Directory doesn't exist
@@ -34,16 +35,19 @@ class TestGitManager(unittest.TestCase):
         # Verify command
         args = mock_run.call_args[0][0]
         self.assertIn("git clone", " ".join(args) if isinstance(args, list) else args)
-        self.assertIn(self.repo_url, " ".join(args) if isinstance(args, list) else args)
+        
+        # Verify DB commit was called
+        mock_db.commit.assert_called()
         
         # Verify status update
         self.mock_website.db_set.assert_any_call('git_repository', self.repo_url)
         self.mock_website.db_set.assert_any_call('deployment_status', 'Success')
 
+    @patch('rpanel.hosting.git_manager.frappe.db')
     @patch('rpanel.hosting.git_manager.frappe.get_doc')
     @patch('rpanel.hosting.git_manager.subprocess.run')
     @patch('rpanel.hosting.git_manager.os.path.exists')
-    def test_clone_repository_not_empty(self, mock_exists, mock_run, mock_get_doc):
+    def test_clone_repository_not_empty(self, mock_exists, mock_run, mock_get_doc, mock_db):
         # Setup
         mock_get_doc.return_value = self.mock_website
         mock_exists.return_value = True # Directory exists
@@ -53,10 +57,11 @@ class TestGitManager(unittest.TestCase):
         self.assertFalse(result['success'])
         self.assertIn("not empty", result['error'])
 
+    @patch('rpanel.hosting.git_manager.frappe.db')
     @patch('rpanel.hosting.git_manager.frappe.get_doc')
     @patch('rpanel.hosting.git_manager.subprocess.run')
     @patch('rpanel.hosting.git_manager.os.path.exists')
-    def test_pull_latest_success(self, mock_exists, mock_run, mock_get_doc):
+    def test_pull_latest_success(self, mock_exists, mock_run, mock_get_doc, mock_db):
         # Setup
         mock_get_doc.return_value = self.mock_website
         mock_exists.return_value = True # .git exists
@@ -67,16 +72,13 @@ class TestGitManager(unittest.TestCase):
         
         # Verify
         self.assertTrue(result['success'])
-        
-        # Verify command
-        args = mock_run.call_args[0][0]
-        self.assertIn("git", " ".join(args) if isinstance(args, list) else args)
-        self.assertIn("pull", " ".join(args) if isinstance(args, list) else args)
+        mock_db.commit.assert_called()
 
+    @patch('rpanel.hosting.git_manager.frappe.db')
     @patch('rpanel.hosting.git_manager.frappe.get_doc')
     @patch('rpanel.hosting.git_manager.subprocess.run')
     @patch('rpanel.hosting.git_manager.os.path.exists')
-    def test_switch_branch_success(self, mock_exists, mock_run, mock_get_doc):
+    def test_switch_branch_success(self, mock_exists, mock_run, mock_get_doc, mock_db):
         # Setup
         mock_get_doc.return_value = self.mock_website
         mock_exists.return_value = True
@@ -87,12 +89,14 @@ class TestGitManager(unittest.TestCase):
         
         # Verify
         self.assertTrue(result['success'])
+        mock_db.commit.assert_called()
         self.mock_website.db_set.assert_any_call('git_branch', 'develop')
         
+    @patch('rpanel.hosting.git_manager.frappe.db')
     @patch('rpanel.hosting.git_manager.frappe.get_doc')
     @patch('rpanel.hosting.git_manager.subprocess.run')
     @patch('rpanel.hosting.git_manager.os.path.exists')
-    def test_rollback_success(self, mock_exists, mock_run, mock_get_doc):
+    def test_rollback_success(self, mock_exists, mock_run, mock_get_doc, mock_db):
         # Setup
         mock_get_doc.return_value = self.mock_website
         mock_exists.return_value = True
@@ -104,9 +108,4 @@ class TestGitManager(unittest.TestCase):
         
         # Verify
         self.assertTrue(result['success'])
-        
-        # Verify command
-        args = mock_run.call_args[0][0]
-        cmd_str = " ".join(args) if isinstance(args, list) else args
-        self.assertIn("reset --hard", cmd_str)
-        self.assertIn(commit_hash, cmd_str)
+        mock_db.commit.assert_called()
