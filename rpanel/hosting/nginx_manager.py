@@ -6,7 +6,6 @@ Nginx Configuration Manager for RPanel
 
 This module manages Nginx configurations for hosted websites while being aware of:
 - Frappe bench config (frappe-bench-frappe)
-- ROKCT Ollama proxy (ollama-proxy.conf)
 
 It ensures RPanel never conflicts with these existing configurations.
 """
@@ -15,11 +14,11 @@ import os
 import subprocess
 import frappe
 from pathlib import Path
+from rpanel.hosting.service_intelligence import ServiceIntelligence
 
 # Protected config files that RPanel should NEVER modify
 PROTECTED_CONFIGS = [
     'frappe-bench-frappe',      # Frappe bench (created by bench setup production)
-    'ollama-proxy.conf',         # ROKCT Ollama API proxy
     'default',                   # System default
 ]
 
@@ -50,15 +49,16 @@ class NginxManager:
         safe_domain = domain.replace('.', '_').replace(':', '_')
         return f"{RPANEL_PREFIX}{safe_domain}.conf"
     
-    def create_website_config(self, domain, site_path, php_version='8.3'):
+    def create_website_config(self, domain, site_path, php_version=None):
         """
         Create Nginx config for a hosted website
         
         Args:
             domain: Website domain name
             site_path: Absolute path to website root
-            php_version: PHP version to use (default: 8.3)
+            php_version: PHP version to use (discovered if None)
         """
+        ver = php_version or ServiceIntelligence.get_default_php_version()
         config_name = self.get_rpanel_config_name(domain)
         config_path = self.available_path / config_name
         
@@ -128,7 +128,7 @@ server {{
     # PHP handling
     location ~ \.php$ {{
         include snippets/fastcgi-php.conf;
-        fastcgi_pass unix:/run/php/php{php_version}-fpm.sock;
+        fastcgi_pass unix:{ServiceIntelligence.get_php_fpm_socket(php_version)};
         fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
         include fastcgi_params;
     }}
@@ -284,7 +284,7 @@ limit_req zone=rpanel_general burst=20 nodelay;
 
 # Convenience functions for use in DocTypes
 
-def create_nginx_config(domain, site_path, php_version='8.3'):
+def create_nginx_config(domain, site_path, php_version=None):
     """Create Nginx config for a website"""
     manager = NginxManager()
     manager.create_website_config(domain, site_path, php_version)
