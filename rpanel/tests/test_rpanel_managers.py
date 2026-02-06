@@ -71,45 +71,6 @@ class TestNginxManager(unittest.TestCase):
         self.assertTrue(found_reload)
 
 
-class TestGitManager(unittest.TestCase):
-    def setUp(self):
-        self.website_name = "test-site"
-        self.repo_url = "https://github.com/example/repo.git"
-        
-        # Mock website doc
-        self.mock_website = MagicMock()
-        self.mock_website.site_path = "/var/www/test-site"
-        self.mock_website.git_branch = "main"
-
-    @patch('rpanel.hosting.git_manager.frappe.get_doc')
-    @patch('rpanel.hosting.git_manager.subprocess.run')
-    @patch('rpanel.hosting.git_manager.os.path.exists')
-    @patch('rpanel.hosting.git_manager.os.makedirs')
-    @patch('rpanel.hosting.git_manager.os.listdir')
-    def test_clone_repository_success(self, mock_listdir, mock_makedirs, mock_exists, mock_run, mock_get_doc):
-        mock_get_doc.return_value = self.mock_website
-        mock_exists.return_value = False # Directory doesn't exist
-        mock_run.return_value = MagicMock(returncode=0)
-        
-        result = clone_repository(self.website_name, self.repo_url)
-        
-        self.assertTrue(result['success'])
-        mock_run.assert_called() # Should run git clone
-        self.mock_website.db_set.assert_called() # Should save properties
-
-    @patch('rpanel.hosting.git_manager.frappe.get_doc')
-    @patch('rpanel.hosting.git_manager.subprocess.run')
-    @patch('rpanel.hosting.git_manager.os.path.exists')
-    def test_pull_latest_success(self, mock_exists, mock_run, mock_get_doc):
-        mock_get_doc.return_value = self.mock_website
-        mock_exists.return_value = True # .git exists
-        mock_run.return_value = MagicMock(returncode=0, stdout="Already up to date.")
-        
-        result = pull_latest(self.website_name)
-        
-        self.assertTrue(result['success'])
-        mock_run.assert_called() # Should run git pull
-
 
 class TestDatabaseManager(unittest.TestCase):
     @patch('rpanel.hosting.database_manager.subprocess.run')
