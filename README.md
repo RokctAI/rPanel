@@ -8,7 +8,7 @@
 
 **RPanel** is a powerful, open-source web hosting control panel built on the Frappe Framework (v15). It is designed to be a complete alternative to cPanel/Plesk, offering a modern UI for managing websites, databases, emails, and servers.
 
-RPanel works by orchestrating standard open-source technologies (Nginx, MariaDB, Exim, etc.) through a beautiful, easy-to-use interface. It can manage the server it's installed on (Local Mode) or manage multiple remote servers via SSH (Cluster Mode).
+RPanel works by orchestrating standard open-source technologies (Nginx, PostgreSQL, MariaDB, Exim, etc.) through a beautiful, easy-to-use interface. It can manage the server it's installed on (Local Mode) or manage multiple remote servers via SSH (Cluster Mode).
 
 ## 🚀 Key Features
 
@@ -34,10 +34,11 @@ RPanel works by orchestrating standard open-source technologies (Nginx, MariaDB,
 - Email forwarding & aliases
 
 ### 💾 Database Management
-- MySQL/MariaDB database creation
-- phpMyAdmin integration
-- Database user management
-- Automatic credentials generation
+- **PostgreSQL First**: Native PostgreSQL support as the core engine
+- **MariaDB/MySQL**: Full compatibility for legacy sites and opt-in selection
+- **WordPress Bridge**: Automated [PG4WP](https://github.com/wp-plugins/postgresql-for-wordpress) installation for WP on PostgreSQL
+- phpMyAdmin & pgAdmin integration ready
+- Database user management with automatic secure credentials
 
 ### 📁 File Management
 - Web-based file browser
@@ -88,7 +89,7 @@ RPanel is built to help you meet strict industry standards. While the software i
 
 ### 💻 System Requirements
 
-RPanel is a modern, feature-rich control panel. To run the full stack (Frappe, MariaDB, Redis, Nginx, Exim, ClamAV), you need a server with sufficient resources.
+RPanel is a modern, feature-rich control panel. To run the full stack (Frappe, PostgreSQL, MariaDB, Redis, Nginx, Exim, ClamAV), you need a server with sufficient resources.
 
 | Resource | Minimum | Recommended |
 | :--- | :--- | :--- |
@@ -109,10 +110,11 @@ RPanel can be installed in two ways: as a standalone control panel on a fresh se
 This is the "Boss Mode" installation. It sets up everything from scratch on a fresh Ubuntu 22.04 or Debian 11/12 server.
 
 **What it installs:**
-- System Dependencies (Python, Node.js, Redis, MariaDB)
-- Frappe Bench & Framework
-- RPanel App
-- Production Configuration (Nginx, Supervisor)
+- Node.js 24 & Python 3.14 (Latest Standards)
+- Dual-Stack Databases (PostgreSQL + MariaDB)
+- Frappe Bench & Framework (v15)
+- RPanel App v1.2.0+
+- Production-Ready Nginx & Supervisor configuration
 
 **Run this command as root:**
 
@@ -289,7 +291,8 @@ We welcome contributions! RPanel is MIT Licensed and open source.
 
 **Lead Developer:** [Rendani Sinyage](https://github.com/RendaniSinyage)
 
-**Contributors:**
+**Community Contributions:**
+Our release notes are automatically powered by the `universal-release` workflow, capturing Authors and Reviewers from every merged Pull Request to ensure proper attribution.
 - [Nurudin Ahmed](https://github.com/nurudinso)
 
 ## 📄 License
