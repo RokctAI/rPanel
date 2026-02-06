@@ -9,14 +9,15 @@ import os
 import subprocess
 import frappe
 from pathlib import Path
+from rpanel.hosting.service_intelligence import ServiceIntelligence
 
 
 class PHPFPMManager:
     """Manages PHP-FPM pools for website isolation"""
     
-    def __init__(self, php_version='8.2'):
-        self.php_version = php_version
-        self.pool_dir = Path(f'/etc/php/{php_version}/fpm/pool.d')
+    def __init__(self, php_version=None):
+        self.php_version = php_version or ServiceIntelligence.get_default_php_version()
+        self.pool_dir = Path(ServiceIntelligence.get_php_fpm_pool_dir(self.php_version))
     
     def create_pool(self, domain, system_user, max_children=5):
         """
@@ -143,13 +144,13 @@ php_admin_value[post_max_size] = 64M
         return f"/run/php/php{self.php_version}-fpm-{system_user}.sock"
 
 
-def create_php_pool(domain, system_user, php_version='8.2'):
+def create_php_pool(domain, system_user, php_version=None):
     """Convenience function to create PHP-FPM pool"""
     manager = PHPFPMManager(php_version)
     return manager.create_pool(domain, system_user)
 
 
-def delete_php_pool(domain, php_version='8.2'):
+def delete_php_pool(domain, php_version=None):
     """Convenience function to delete PHP-FPM pool"""
     manager = PHPFPMManager(php_version)
     manager.delete_pool(domain)
@@ -159,7 +160,8 @@ def delete_php_pool(domain, php_version='8.2'):
 def test_php_pool(domain):
     """Test if PHP-FPM pool is working"""
     try:
-        pool_dir = Path(f'/etc/php/8.2/fpm/pool.d')
+        ver = ServiceIntelligence.get_default_php_version()
+        pool_dir = Path(ServiceIntelligence.get_php_fpm_pool_dir(ver))
         pool_file = pool_dir / f"{domain}.conf"
         
         if not pool_file.exists():
@@ -167,7 +169,7 @@ def test_php_pool(domain):
         
         # Test PHP-FPM config
         result = subprocess.run(
-            ['sudo', 'php-fpm8.2', '-t'],
+            ['sudo', f'php-fpm{ver}', '-t'],
             capture_output=True,
             text=True
         )
