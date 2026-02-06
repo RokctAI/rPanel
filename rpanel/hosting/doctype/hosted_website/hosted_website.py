@@ -13,6 +13,7 @@ from rpanel.hosting.mysql_utils import run_mysql_command
 from rpanel.hosting.system_user_manager import SystemUserManager
 from rpanel.hosting.php_fpm_manager import PHPFPMManager
 from rpanel.hosting.postgres_utils import create_pg_database, run_psql_command
+from rpanel.hosting.service_intelligence import ServiceIntelligence
 
 class HostedWebsite(Document):
     def validate(self):
@@ -361,8 +362,8 @@ require_once ABSPATH . 'wp-settings.php';
         if hasattr(self, 'php_fpm_socket') and self.php_fpm_socket:
             php_socket = self.php_fpm_socket
         else:
-            # Fallback to default socket (for backwards compatibility)
-            php_socket = f"/run/php/php{self.php_version}-fpm.sock"
+            # Fallback to default socket (discovered via ServiceIntelligence)
+            php_socket = ServiceIntelligence.get_php_fpm_socket(self.php_version)
 
         listen_block = "listen 80;"
         ssl_block = ""
