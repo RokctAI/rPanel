@@ -64,30 +64,77 @@ def search_replace_db(website_name, search, replace):
         if result.returncode == 0:
             return {'success': True, 'output': result.stdout}
         else:
-            # Fallback to manual SQL - Secure: password hidden from process list
+            # Fallback for PostgreSQL (WP-CLI is MySQL-only)
+            if website.db_engine == "PostgreSQL":
+                php_script = f"""<?php
+define('WP_USE_THEMES', false);
+require_once('wp-load.php');
+
+function safe_replace($data, $search, $replace) {{
+    if (is_string($data)) {{
+        return str_replace($search, $replace, $data);
+    }}
+    if (is_array($data)) {{
+        foreach ($data as &$v) $v = safe_replace($v, $search, $replace);
+        return $data;
+    }}
+    if (is_object($data)) {{
+        foreach ($data as $k => &$v) $v = safe_replace($v, $search, $replace);
+        return $data;
+    }}
+    return $data;
+}}
+
+function process_table($table, $column, $id_col, $search, $replace) {{
+    global $wpdb;
+    $rows = $wpdb->get_results("SELECT $id_col, $column FROM $table WHERE $column LIKE '%" . $wpdb->esc_like($search) . "%'");
+    foreach ($rows as $row) {{
+        $old_val = $row->$column;
+        $unserialized = is_serialized($old_val) ? unserialize($old_val) : $old_val;
+        $new_val = safe_replace($unserialized, $search, $replace);
+        
+        if (is_serialized($old_val)) $new_val = serialize($new_val);
+        
+        $wpdb->update($table, array($column => $new_val), array($id_col => $row->$id_col));
+    }}
+}}
+
+process_table($wpdb->options, 'option_value', 'option_id', '{search}', '{replace}');
+process_table($wpdb->posts, 'post_content', 'ID', '{search}', '{replace}');
+process_table($wpdb->postmeta, 'meta_value', 'meta_id', '{search}', '{replace}');
+echo "Search-replace completed via PHP Bridge\\n";
+?>
+"""
+                script_path = os.path.join(website.site_path, "rpanel_sr.php")
+                try:
+                    # Write script
+                    with open(script_path, "w") as f:
+                        f.write(php_script)
+                    
+                    # Execute as www-data
+                    cmd = f"sudo -u www-data php {script_path}"
+                    subprocess.run(shlex.split(cmd), check=True, capture_output=True)
+                    
+                    return {'success': True, 'message': 'Search/replace completed via PG Bridge'}
+                finally:
+                    if os.path.exists(script_path):
+                        os.remove(script_path)
+            
+            # Legacy Fallback for MariaDB (Direct SQL for speed, assuming simple strings)
             sql = f"""
             UPDATE wp_options SET option_value = REPLACE(option_value, '{search}', '{replace}');
             UPDATE wp_posts SET post_content = REPLACE(post_content, '{search}', '{replace}');
             UPDATE wp_postmeta SET meta_value = REPLACE(meta_value, '{search}', '{replace}');
             """
             
-            if website.db_engine == "MariaDB":
-                run_mysql_command(
-                    sql=sql,
-                    database=website.db_name,
-                    user=website.db_user,
-                    password=website.db_password
-                )
-            else:
-                # PostgreSQL
-                run_psql_command(
-                    sql=sql,
-                    database=website.db_name,
-                    user=website.db_user,
-                    password=website.db_password
-                )
+            run_mysql_command(
+                sql=sql,
+                database=website.db_name,
+                user=website.db_user,
+                password=website.db_password
+            )
             
-            return {'success': True, 'message': 'Search/replace completed'}
+            return {'success': True, 'message': 'Search/replace completed via Legacy SQL'}
     except Exception as e:
         return {'success': False, 'error': str(e)}
 
