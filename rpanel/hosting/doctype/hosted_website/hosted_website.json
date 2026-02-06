@@ -24,6 +24,7 @@
         "ssl_expiry",
         "ssl_issuer",
         "section_break_database",
+        "db_engine",
         "db_name",
         "db_user",
         "db_password",
@@ -145,6 +146,13 @@
             "fieldname": "section_break_database",
             "fieldtype": "Section Break",
             "label": "Database Configuration"
+        },
+        {
+            "default": "PostgreSQL",
+            "fieldname": "db_engine",
+            "fieldtype": "Select",
+            "label": "Database Engine",
+            "options": "PostgreSQL\nMariaDB"
         },
         {
             "fieldname": "db_name",
