@@ -42,10 +42,11 @@ class TestHostedWebsite(unittest.TestCase):
     @patch('rpanel.hosting.doctype.hosted_website.hosted_website.subprocess.run')
     @patch('rpanel.hosting.doctype.hosted_website.hosted_website.os.path.exists')
     @patch('rpanel.hosting.doctype.hosted_website.hosted_website.run_mysql_command')
+    @patch('rpanel.hosting.doctype.hosted_website.hosted_website.create_pg_database')
     @patch('rpanel.hosting.doctype.hosted_website.hosted_website.run_certbot')
     @patch('rpanel.hosting.doctype.hosted_website.hosted_website.update_exim_config')
     @patch('builtins.open', new_callable=mock_open)
-    def test_provision_site_success(self, mock_file, mock_exim, mock_certbot, mock_mysql, mock_exists, mock_run, MockPHP, MockUser):
+    def test_provision_site_success(self, mock_file, mock_exim, mock_certbot, mock_pg, mock_mysql, mock_exists, mock_run, MockPHP, MockUser):
         """Test successful site provisioning for a CMS"""
         # Setup mocks
         mock_exists.return_value = False # Directory doesn't exist yet
@@ -83,7 +84,10 @@ class TestHostedWebsite(unittest.TestCase):
             self.assertTrue(mock_run.called)
             
             # 4. Database Setup
-            mock_mysql.assert_called() # Should call run_mysql_command for user creation/grants
+            if self.doc.db_engine == "MariaDB":
+                mock_mysql.assert_called()
+            else:
+                mock_pg.assert_called_with("test_db", "test_user", "password")
             
             # 5. WP Install
             mock_install.assert_called()
