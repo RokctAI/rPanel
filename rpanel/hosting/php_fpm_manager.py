@@ -22,16 +22,8 @@ class PHPFPMManager:
     def create_pool(self, domain, system_user, max_children=5):
         """
         Create dedicated PHP-FPM pool for a site
-        
-        Args:
-            domain: Website domain
-            system_user: Linux user to run PHP as
-            max_children: Max PHP-FPM children processes
-        
-        Returns:
-            str: Path to socket file
         """
-        socket_path = f"/run/php/php{self.php_version}-fpm-{system_user}.sock"
+        socket_path = ServiceIntelligence.get_php_fpm_socket(self.php_version, system_user)
         pool_file = self.pool_dir / f"{domain}.conf"
         
         # Check if pool already exists
@@ -141,7 +133,7 @@ php_admin_value[post_max_size] = 64M
     
     def get_socket_path(self, system_user):
         """Get socket path for a system user"""
-        return f"/run/php/php{self.php_version}-fpm-{system_user}.sock"
+        return ServiceIntelligence.get_php_fpm_socket(self.php_version, system_user)
 
 
 def create_php_pool(domain, system_user, php_version=None):
