@@ -49,6 +49,6 @@ All installation scripts read from this file:
 - Python 3
 - Redis
 - MariaDB
-- PostgreSQL (New Fleet Standard)
+- PostgreSQL 15 + pgvector (New Fleet Standard)
 - Node.js
 - Yarn
