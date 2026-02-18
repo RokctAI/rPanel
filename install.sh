@@ -76,7 +76,16 @@ install_system_deps() {
 
   # Core dependencies for Frappe/RPanel
   if [[ "$DB_TYPE" == "postgres" ]]; then
-    apt-get install -y git python3-dev python3-pip python3-venv redis-server software-properties-common postgresql postgresql-client libpq-dev xvfb libfontconfig wkhtmltopdf curl
+    # Install PGDG Repo for latest Postgres + pgvector
+    echo -e "${GREEN}Configuring PostgreSQL PGDG Repo...${NC}"
+    apt-get install -y lsb-release curl ca-certificates gnupg
+    install -d /usr/share/postgresql-common/pgdg
+    curl -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc --fail https://www.postgresql.org/media/keys/ACCC4CF8.asc
+    sh -c 'echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
+    apt-get update
+
+    # Install Postgres 15 + pgvector (Standard Fleet Version)
+    apt-get install -y git python3-dev python3-pip python3-venv redis-server software-properties-common postgresql-15 postgresql-15-pgvector postgresql-client-15 libpq-dev xvfb libfontconfig wkhtmltopdf curl
   else
     apt-get install -y git python3-dev python3-pip python3-venv redis-server software-properties-common mariadb-server mariadb-client xvfb libfontconfig wkhtmltopdf curl
   fi
