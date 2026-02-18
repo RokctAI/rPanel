@@ -16,11 +16,30 @@ def after_install():
     print("Configuring security features...")
     setup_security_features()
     
+    # Setup pgvector
+    print("Configuring Database Extensions...")
+    setup_vector_extension()
+    
     print("RPanel installed successfully!")
 
 def after_migrate():
     """Run after migrations"""
     check_dependencies()
+    setup_vector_extension()
+
+def setup_vector_extension():
+    """
+    Enables the pgvector extension if not already enabled.
+    """
+    try:
+        frappe.db.sql("CREATE EXTENSION IF NOT EXISTS vector")
+        frappe.db.commit()
+        return True
+    except Exception as e:
+        frappe.db.rollback()
+        # Log purely as warning, don't crash install
+        print(f"⚠️ Failed to enable pgvector: {e}")
+        return False
 
 def install_dependencies():
     """Install Python dependencies"""
