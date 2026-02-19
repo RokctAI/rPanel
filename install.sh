@@ -222,6 +222,14 @@ configure_postgresql() {
   # Set postgres user password
   sudo -u postgres psql -c "ALTER USER postgres PASSWORD '$DB_ROOT_PASS';"
   
+  # Pre-enable extensions in template1 so all new bench sites have them
+  # This solves permission errors for non-superuser site accounts
+  # We do this while the default 'peer' authentication is still active
+  echo -e "${GREEN}Enabling pgvector, cube, earthdistance in template1...${NC}"
+  sudo -u postgres psql -d template1 -c "CREATE EXTENSION IF NOT EXISTS vector;"
+  sudo -u postgres psql -d template1 -c "CREATE EXTENSION IF NOT EXISTS cube;"
+  sudo -u postgres psql -d template1 -c "CREATE EXTENSION IF NOT EXISTS earthdistance;"
+  
   # Allow password authentication for local connections
   # Note: Frappe needs this to connect to the postgres engine
   # Improved major version detection
@@ -234,13 +242,6 @@ configure_postgresql() {
     sed -i '/^local/s/peer/md5/' "$PG_CONF"
     sed -i '/^host/s/ident/md5/' "$PG_CONF"
     systemctl restart postgresql
-    
-    # Pre-enable extensions in template1 so all new bench sites have them
-    # This solves permission errors for non-superuser site accounts
-    echo -e "${GREEN}Enabling pgvector, cube, earthdistance in template1...${NC}"
-    sudo -u postgres psql -d template1 -c "CREATE EXTENSION IF NOT EXISTS vector;"
-    sudo -u postgres psql -d template1 -c "CREATE EXTENSION IF NOT EXISTS cube;"
-    sudo -u postgres psql -d template1 -c "CREATE EXTENSION IF NOT EXISTS earthdistance;"
   else
     echo -e "${RED}Warning: Could not find PostgreSQL config at $PG_CONF. Manual configuration may be required.${NC}"
   fi
