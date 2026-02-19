@@ -87,14 +87,14 @@ install_system_deps() {
     add-apt-repository -y ppa:deadsnakes/ppa
     apt-get update
 
-    # Install Postgres 15 + pgvector + Python 3.14
-    apt-get install -y git python3.14-dev python3.14-venv python3-pip redis-server software-properties-common postgresql-15 postgresql-15-pgvector postgresql-client-15 libpq-dev xvfb libfontconfig wkhtmltopdf curl
+    # Install Postgres 15 + pgvector + Python 3.14 + Compat tools
+    apt-get install -y git python3.14-dev python3.14-venv python3-pip python-is-python3 redis-server software-properties-common postgresql-15 postgresql-15-pgvector postgresql-client-15 libpq-dev xvfb libfontconfig wkhtmltopdf curl
   else
     # Add Python 3.14 (Standard Fleet Version)
     add-apt-repository -y ppa:deadsnakes/ppa
     apt-get update
     
-    apt-get install -y git python3.14-dev python3.14-venv python3-pip redis-server software-properties-common mariadb-server mariadb-client xvfb libfontconfig wkhtmltopdf curl
+    apt-get install -y git python3.14-dev python3.14-venv python3-pip python-is-python3 redis-server software-properties-common mariadb-server mariadb-client xvfb libfontconfig wkhtmltopdf curl
   fi
   
   # Configure Exim4 for internet mail
@@ -114,8 +114,8 @@ EOF
   # SSL/TLS (for securing the control panel domain)
   apt-get install -y certbot python3-certbot-nginx
   
-  # Node.js (required by Frappe)
-  curl -fsSL https://deb.nodesource.com/setup_24.x | bash -
+  # Node.js (Stable version for Frappe/RPanel)
+  curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
   apt-get install -y nodejs
   
   # Install Yarn
@@ -239,7 +239,7 @@ export PATH=\$PATH:/home/frappe/.local/bin
 cd /home/frappe
 if [ ! -d "frappe-bench" ]; then
   pip3 install frappe-bench --user
-  bench init frappe-bench --frappe-branch version-16 --python python3.14 $( [[ "$DB_TYPE" == "postgres" ]] && echo "--db-type postgres" )
+  bench init frappe-bench --frappe-branch version-16 --python python3.14 --skip-assets --skip-redis-config-generation $( [[ "$DB_TYPE" == "postgres" ]] && echo "--db-type postgres" )
 fi
 EOF
 }
