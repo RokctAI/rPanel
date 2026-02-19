@@ -33,4 +33,9 @@ RUN for app in $(ls apps); do \
 # 5. Build Assets (JS/CSS)
 RUN bench build
 
+# 6. Setup Entrypoint
+COPY --chown=frappe:frappe docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
+ENTRYPOINT ["docker-entrypoint.sh"]
 CMD ["bench", "start"]
