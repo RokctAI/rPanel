@@ -121,9 +121,9 @@ EOF
   # SSL/TLS (for securing the control panel domain)
   apt-get install -y certbot python3-certbot-nginx
   
-  # Node.js (Frappe v16 requires Node >= 24)
-  # Using nodesource setup_current to get the latest stable (23/24)
-  curl -fsSL https://deb.nodesource.com/setup_current.x | bash -
+  # Node.js (Frappe v16 recommends Node 20 or 22 LTS)
+  # Node 25+ has shown compatibility issues with esbuild.js in some environments
+  curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
   apt-get install -y nodejs
   
   # Nuclear Path Override: CI environments often have Node pre-installed in /usr/local/bin
@@ -318,7 +318,8 @@ sudo -u frappe -i -H env HOME=/home/frappe XDG_CONFIG_HOME=/home/frappe/.config 
 export PATH=\$PATH:/home/frappe/.local/bin
 cd /home/frappe/frappe-bench
 if [ ! -d "apps/rpanel" ]; then
-  bench get-app https://github.com/RokctAI/rpanel.git $TAG_OPTION
+  # Skip assets during get-app to avoid esbuild crashes before site is ready
+  bench get-app https://github.com/RokctAI/rpanel.git $TAG_OPTION --skip-assets
 else
   cd apps/rpanel
   git fetch --tags
@@ -327,6 +328,9 @@ else
   fi
   cd ../..
 fi
+
+# Build assets now that apps are in place
+bench build --app rpanel || echo "Warning: Initial build failed, will retry after site creation"
 
 # Ensure site exists
 SITE_NAME="${DOMAIN_NAME:-rpanel.local}"
