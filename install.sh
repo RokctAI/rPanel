@@ -21,7 +21,7 @@ echo -e "${BLUE}=================================================${NC}"
 
 # Determine deployment mode
 MODE="${DEPLOY_MODE:-fresh}"
-DB_TYPE="${DB_TYPE:-mariadb}"
+DB_TYPE="${DB_TYPE:-postgres}"
 
 if [[ "$MODE" != "fresh" && "$MODE" != "bench" ]]; then
   echo -e "${RED}Invalid DEPLOY_MODE: $MODE. Use 'fresh' or 'bench'.${NC}"
@@ -118,6 +118,15 @@ EOF
   # Using nodesource setup_current to get the latest stable (23/24)
   curl -fsSL https://deb.nodesource.com/setup_current.x | bash -
   apt-get install -y nodejs
+  
+  # Nuclear Path Override: CI environments often have Node pre-installed in /usr/local/bin
+  # which shadows the version we just installed in /usr/bin.
+  ln -sf /usr/bin/node /usr/local/bin/node
+  ln -sf /usr/bin/npm /usr/local/bin/npm
+  ln -sf /usr/bin/npx /usr/local/bin/npx
+  
+  # Verify Node version
+  node -v
   
   # Install Yarn
   npm install -g yarn
@@ -238,11 +247,12 @@ create_frappe_user() {
 install_bench() {
   echo -e "${GREEN}Installing Bench...${NC}"
   # We use -i and explicit env to ensure HOME doesn't leak from the runner user
-  sudo -u frappe -i -H env HOME=/home/frappe XDG_CONFIG_HOME=/home/frappe/.config XDG_DATA_HOME=/home/frappe/.local/share bash <<EOF
+  sudo -u frappe -i -H env HOME=/home/frappe XDG_CONFIG_HOME=/home/frappe/.config XDG_DATA_HOME=/home/frappe/.local/share PATH="/home/frappe/.local/bin:/usr/bin:/usr/local/bin:$PATH" bash <<EOF
+set -e
 export PATH=\$PATH:/home/frappe/.local/bin
 cd /home/frappe
 if [ ! -d "frappe-bench" ]; then
-  pip3 install frappe-bench --user
+  python3.14 -m pip install frappe-bench --user
   bench init frappe-bench --frappe-branch version-16 --python python3.14 --skip-assets --skip-redis-config-generation $( [[ "$DB_TYPE" == "postgres" ]] && echo "--db-type postgres" )
 fi
 EOF
@@ -279,7 +289,7 @@ else
   TAG_OPTION="--branch $LATEST_TAG"
 fi
 
-sudo -u frappe -i -H env HOME=/home/frappe XDG_CONFIG_HOME=/home/frappe/.config XDG_DATA_HOME=/home/frappe/.local/share bash <<EOF
+sudo -u frappe -i -H env HOME=/home/frappe XDG_CONFIG_HOME=/home/frappe/.config XDG_DATA_HOME=/home/frappe/.local/share PATH="/usr/bin:/usr/local/bin:/home/frappe/.local/bin:$PATH" bash <<EOF
 export PATH=\$PATH:/home/frappe/.local/bin
 cd /home/frappe/frappe-bench
 if [ ! -d "apps/rpanel" ]; then
