@@ -87,8 +87,15 @@ install_system_deps() {
     add-apt-repository -y ppa:deadsnakes/ppa
     apt-get update
 
-    # Install Postgres 16 (Native to Noble) + pgvector + Python 3.14 + Compat tools
-    apt-get install -y git python3.14-dev python3.14-venv python3-pip python-is-python3 redis-server software-properties-common postgresql-16 postgresql-client-16 postgresql-16-pgvector libpq-dev xvfb libfontconfig wkhtmltopdf curl
+    # Install Essential System Tools
+    apt-get install -y git software-properties-common curl redis-server xvfb libfontconfig wkhtmltopdf
+    
+    # Install Python 3.14 (Standard Fleet Version)
+    apt-get install -y python3.14-dev python3.14-venv python3-pip python-is-python3
+    
+    # Install Postgres 16 (Native to Noble) + Matching Contrib & Vector
+    # We install these in a dedicated group to ensure no conflicts with other packages
+    apt-get install -y postgresql-16 postgresql-client-16 postgresql-contrib-16 postgresql-16-pgvector libpq-dev
   else
     # Add Python 3.14 (Standard Fleet Version)
     add-apt-repository -y ppa:deadsnakes/ppa
@@ -223,8 +230,12 @@ configure_postgresql() {
   sudo -u postgres psql -c "ALTER USER postgres PASSWORD '$DB_ROOT_PASS';"
   
   # Pre-enable extensions in template1 so all new bench sites have them
-  # This solves permission errors for non-superuser site accounts
-  # We do this while the default 'peer' authentication is still active
+  # Verification: Check if vector.control exists, if not, try re-installing
+  if [ ! -f "/usr/share/postgresql/16/extension/vector.control" ]; then
+    echo -e "${RED}Warning: vector.control not found. Attempting emergency re-install...${NC}"
+    apt-get install -y --reinstall postgresql-16-pgvector
+  fi
+
   echo -e "${GREEN}Enabling pgvector, cube, earthdistance in template1...${NC}"
   sudo -u postgres psql -d template1 -c "CREATE EXTENSION IF NOT EXISTS vector;"
   sudo -u postgres psql -d template1 -c "CREATE EXTENSION IF NOT EXISTS cube;"
