@@ -82,12 +82,19 @@ install_system_deps() {
     install -d /usr/share/postgresql-common/pgdg
     curl -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc --fail https://www.postgresql.org/media/keys/ACCC4CF8.asc
     sh -c 'echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
+    
+    # Add Python 3.14 (Standard Fleet Version)
+    add-apt-repository -y ppa:deadsnakes/ppa
     apt-get update
 
-    # Install Postgres 15 + pgvector (Standard Fleet Version)
-    apt-get install -y git python3-dev python3-pip python3-venv redis-server software-properties-common postgresql-15 postgresql-15-pgvector postgresql-client-15 libpq-dev xvfb libfontconfig wkhtmltopdf curl
+    # Install Postgres 15 + pgvector + Python 3.14
+    apt-get install -y git python3.14-dev python3.14-venv python3-pip redis-server software-properties-common postgresql-15 postgresql-15-pgvector postgresql-client-15 libpq-dev xvfb libfontconfig wkhtmltopdf curl
   else
-    apt-get install -y git python3-dev python3-pip python3-venv redis-server software-properties-common mariadb-server mariadb-client xvfb libfontconfig wkhtmltopdf curl
+    # Add Python 3.14 (Standard Fleet Version)
+    add-apt-repository -y ppa:deadsnakes/ppa
+    apt-get update
+    
+    apt-get install -y git python3.14-dev python3.14-venv python3-pip redis-server software-properties-common mariadb-server mariadb-client xvfb libfontconfig wkhtmltopdf curl
   fi
   
   # Configure Exim4 for internet mail
@@ -228,14 +235,11 @@ create_frappe_user() {
 install_bench() {
   echo -e "${GREEN}Installing Bench...${NC}"
   sudo -u frappe -H bash <<EOF
+export PATH=\$PATH:/home/frappe/.local/bin
 cd /home/frappe
 if [ ! -d "frappe-bench" ]; then
-  pip3 install frappe-bench
-  if [[ "$DB_TYPE" == "postgres" ]]; then
-    bench init frappe-bench --frappe-branch version-15 --db-type postgres
-  else
-    bench init frappe-bench --frappe-branch version-15
-  fi
+  pip3 install frappe-bench --user
+  bench init frappe-bench --frappe-branch version-15 --python python3.14 $( [[ "$DB_TYPE" == "postgres" ]] && echo "--db-type postgres" )
 fi
 EOF
 }
@@ -272,6 +276,7 @@ else
 fi
 
 sudo -u frappe -H bash <<EOF
+export PATH=\$PATH:/home/frappe/.local/bin
 cd /home/frappe/frappe-bench
 if [ ! -d "apps/rpanel" ]; then
   bench get-app https://github.com/RokctAI/rpanel.git $TAG_OPTION
@@ -287,18 +292,14 @@ fi
 # Ensure site exists
 SITE_NAME="${DOMAIN_NAME:-rpanel.local}"
 if [ ! -d "sites/$SITE_NAME" ]; then
-  if [[ "$DB_TYPE" == "postgres" ]]; then
-    bench new-site $SITE_NAME --db-type postgres --admin-password admin --db-root-password $DB_ROOT_PASS --install-app rpanel || true
-  else
-    bench new-site $SITE_NAME --admin-password admin --db-root-password $DB_ROOT_PASS --install-app rpanel || true
-  fi
+  bench new-site $SITE_NAME --admin-password admin --db-root-password $DB_ROOT_PASS --install-app rpanel $( [[ "$DB_TYPE" == "postgres" ]] && echo "--db-type postgres" ) || true
 fi
 bench --site $SITE_NAME install-app rpanel
 EOF
 
 # Production setup
 echo -e "${GREEN}Configuring production services...${NC}"
-sudo bench setup production frappe
+sudo -u frappe -H bash -c "export PATH=\$PATH:/home/frappe/.local/bin; cd /home/frappe/frappe-bench; bench setup production frappe"
 
 # Provision localhost if self-hosted mode
 if [[ "$MODE" == "fresh" && ("$SELF_HOSTED" == "Y" || "$SELF_HOSTED" == "y") ]]; then
