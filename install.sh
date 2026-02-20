@@ -3,7 +3,7 @@
 # RPanel Flexible Installer
 # Usage: DEPLOY_MODE=[fresh|bench|dependency] ./install.sh
 # Default mode is "fresh" (full VPS install).
-INSTALLER_VERSION="v8.2-LOGIN-SHELL-FIX"
+INSTALLER_VERSION="v8.3-PYTHONPATH-BRIDGE"
 
 echo -e "\033[0;34mRPanel Installer Version: $INSTALLER_VERSION\033[0;0m"
 
@@ -438,24 +438,45 @@ echo -e "${GREEN}Configuring production services...${NC}"
 run_quiet "Installing Supervisor" apt-get install -y -qq -o=Dpkg::Use-Pty=0 supervisor
 run_quiet "Starting Supervisor" systemctl restart supervisor
 
-# 2. THE CI RECOVERY FIX: Execute as a full login shell for the frappe user
-# We use 'sudo -i -u frappe' to ensure the user's local bin is in the PATH.
-# We call 'sudo' internally to handle /etc/ permissions.
+# 2. THE CI MASTER FIX: Login shell with explicit PYTHONPATH
+# We find where bench lives and force the login shell to see it before running setup
 run_quiet "Generating production config" sudo -i -u frappe bash <<EOF
+export PATH="/home/frappe/.local/bin:\$PATH"
+export PYTHONPATH=\$(python3.14 -m site --user-site 2>/dev/null || echo "/home/frappe/.local/lib/python3.14/site-packages")
 cd /home/frappe/frappe-bench
-sudo /home/frappe/.local/bin/bench setup production frappe --yes --user frappe
+sudo env "PATH=\$PATH" "PYTHONPATH=\$PYTHONPATH" /home/frappe/.local/bin/bench setup production frappe --yes --user frappe
 EOF
 
-# 3. Manual override if Bench fails to link (the "Nuclear Option")
-if [ ! -f /etc/nginx/conf.d/frappe.conf ] && [ -f /home/frappe/frappe-bench/config/nginx.conf ]; then
-    run_quiet "Emergency Nginx link" ln -sf /home/frappe/frappe-bench/config/nginx.conf /etc/nginx/conf.d/frappe.conf
+# 3. Final Verification and Emergency Linking
+echo -n -e "${BLUE}  - Verifying Nginx configuration... ${NC}"
+NGINX_CONF="/etc/nginx/conf.d/frappe.conf"
+BENCH_CONF="/home/frappe/frappe-bench/config/nginx.conf"
+
+if [ -f "$NGINX_CONF" ]; then
+    echo -e "${GREEN}✓ VERIFIED${NC}"
+elif [ -f "$BENCH_CONF" ]; then
+    ln -sf "$BENCH_CONF" "$NGINX_CONF"
+    echo -e "${YELLOW}✓ RECOVERED (Manually Linked)${NC}"
+else
+    echo -e "${RED}✗ FAILED${NC}"
+    echo -e "${RED}Error: Nginx config was not generated at $BENCH_CONF${NC}"
+    exit 1
 fi
 
-# Fix directory permissions so Nginx/www-data can traverse the frappe home directory (Mandatory for CI)
-run_quiet "Applying directory permissions for Nginx" chmod o+x /home/frappe /home/frappe/frappe-bench /home/frappe/frappe-bench/sites
+# 4. Critical: The GitHub Actions Permission Punch
+run_quiet "Applying directory permissions" chmod o+x /home/frappe /home/frappe/frappe-bench /home/frappe/frappe-bench/sites
 
+# 5. Service Restart
 run_quiet "Restarting Nginx" systemctl restart nginx
 run_quiet "Restarting Supervisor" systemctl restart supervisor
+
+# 6. Final API Health Check
+echo -n -e "${BLUE}  - RPanel API Health Check... ${NC}"
+if curl -s -f http://localhost > /dev/null; then
+    echo -e "${GREEN}✓ ONLINE${NC}"
+else
+    echo -e "${YELLOW}! UNRESPONSIVE (Check Nginx Logs)${NC}"
+fi
 
 # Provision localhost if self-hosted mode
 if [[ "$MODE" == "fresh" && ("$SELF_HOSTED" == "Y" || "$SELF_HOSTED" == "y") ]]; then
