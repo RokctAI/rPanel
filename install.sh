@@ -3,7 +3,7 @@
 # RPanel Flexible Installer
 # Usage: DEPLOY_MODE=[fresh|bench|dependency] ./install.sh
 # Default mode is "fresh" (full VPS install).
-INSTALLER_VERSION="v8.8-CI-SERVICE-GRACE"
+INSTALLER_VERSION="v8.9-SILENT-PROVISION"
 
 echo -e "\033[0;34mRPanel Installer Version: $INSTALLER_VERSION\033[0;0m"
 
