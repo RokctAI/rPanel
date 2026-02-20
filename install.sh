@@ -17,7 +17,8 @@ NC='\033[0;0m'
 
 # Global Build Hardening (Required for resource-constrained environments to avoid SIGTERM 143)
 export CI=${CI:-true}
-export NODE_OPTIONS='--max-old-space-size=2560'
+# Use 1.5GB to force more aggressive GC. Higher limits can hit cgroup caps on small runners.
+export NODE_OPTIONS='--max-old-space-size=1536'
 export ESBUILD_WORKERS=1
 export MAX_WORKERS=1
 export CPU_COUNT=1
@@ -206,6 +207,7 @@ EOF
 
 # Helper to setup swap for low-memory environments (prevents OOM kills like 143)
 setup_swap() {
+  echo -e "${BLUE}Diagnostics: Entering setup_swap...${NC}"
   if [[ "$MODE" == "fresh" && ! -f /swapfile ]]; then
     # Check if we have less than 4GB of RAM
     local total_mem=$(free -m | grep -i mem | awk '{print $2}')
@@ -221,6 +223,8 @@ setup_swap() {
       fi
       echo -e "${GREEN}✓ Swap enabled${NC}"
     fi
+  else
+    echo -e "${BLUE}Diagnostics: Swap check bypassed (Mode: $MODE, Swapfile exists: $([ -f /swapfile ] && echo "Yes" || echo "No"))${NC}"
   fi
 }
 
@@ -403,9 +407,9 @@ fi
 run_quiet "Registering RPanel app" $BENCH_SUDO bash -c "cd /home/frappe/frappe-bench && grep -q '^rpanel$' sites/apps.txt || (echo '' >> sites/apps.txt && echo 'rpanel' >> sites/apps.txt)"
 
 run_quiet "Installing RPanel into site" $BENCH_SUDO bash -c "cd /home/frappe/frappe-bench && bench --site $SITE_NAME install-app rpanel"
-# Use --hard-link to save disk space/IO and --production for optimized build
+# Use --hard-link to save disk space/IO. Removing --production as it sometimes increases memory spikes.
 # Adding export NODE_OPTIONS again inside bash -c for redundancy
-run_quiet "Building application assets" $BENCH_SUDO bash -c "export NODE_OPTIONS='--max-old-space-size=2560'; export GENERATE_SOURCEMAP=false; cd /home/frappe/frappe-bench && bench build --app rpanel --production --hard-link"
+run_quiet "Building application assets" $BENCH_SUDO bash -c "export NODE_OPTIONS='--max-old-space-size=1536'; export GENERATE_SOURCEMAP=false; cd /home/frappe/frappe-bench && free -m >> \"$INSTALL_LOG\" 2>&1 && bench build --app rpanel --hard-link"
 
 # Production setup
 echo -e "${GREEN}Configuring production services...${NC}"
