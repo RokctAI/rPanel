@@ -58,7 +58,7 @@ class NginxManager:
             site_path: Absolute path to website root
             php_version: PHP version to use (discovered if None)
         """
-        ver = php_version or ServiceIntelligence.get_default_php_version()
+        ver = php_version or ServiceIntelligence.get_default_php_version()  # noqa: F841
         config_name = self.get_rpanel_config_name(domain)
         config_path = self.available_path / config_name
         
@@ -121,12 +121,12 @@ server {{
     add_header X-XSS-Protection "1; mode=block" always;
     
     # Deny access to hidden files
-    location ~ /\. {{
+    location ~ /\\. {{
         deny all;
     }}
     
     # PHP handling
-    location ~ \.php$ {{
+    location ~ \\.php$ {{
         include snippets/fastcgi-php.conf;
         fastcgi_pass unix:{ServiceIntelligence.get_php_fpm_socket(php_version)};
         fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
@@ -139,12 +139,12 @@ server {{
     }}
     
     # Deny access to sensitive files
-    location ~* \.(htaccess|htpasswd|ini|log|sh|sql|conf)$ {{
+    location ~* \\.(htaccess|htpasswd|ini|log|sh|sql|conf)$ {{
         deny all;
     }}
     
     # Cache static assets
-    location ~* \.(jpg|jpeg|png|gif|ico|css|js|svg|woff|woff2|ttf|eot)$ {{
+    location ~* \\.(jpg|jpeg|png|gif|ico|css|js|svg|woff|woff2|ttf|eot)$ {{
         expires 30d;
         add_header Cache-Control "public, immutable";
     }}
