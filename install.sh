@@ -359,7 +359,7 @@ run_quiet "Setting up Redis config" $BENCH_SUDO bash -c "cd /home/frappe/frappe-
 
 SITE_NAME="${DOMAIN_NAME:-rpanel.local}"
 if [ ! -d "/home/frappe/frappe-bench/sites/$SITE_NAME" ]; then
-  run_quiet "Creating site: $SITE_NAME" $BENCH_SUDO bash -c "cd /home/frappe/frappe-bench && bench new-site $SITE_NAME --admin-password admin --db-root-password $DB_ROOT_PASS $( [[ \"$DB_TYPE\" == \"postgres\" ]] && echo \"--db-type postgres\" )"
+  run_quiet "Creating site: $SITE_NAME" $BENCH_SUDO bash -c "cd /home/frappe/frappe-bench && bench new-site $SITE_NAME --admin-password admin --db-root-password $DB_ROOT_PASS $( [[ \"$DB_TYPE\" == \"postgres\" ]] && echo --db-type postgres )"
 fi
 
 run_quiet "Installing RPanel into site" $BENCH_SUDO bash -c "cd /home/frappe/frappe-bench && bench --site $SITE_NAME install-app rpanel"
