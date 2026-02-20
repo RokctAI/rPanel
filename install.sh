@@ -121,9 +121,9 @@ EOF
   # SSL/TLS (for securing the control panel domain)
   apt-get install -y certbot python3-certbot-nginx
   
-  # Node.js (Frappe v16 recommends Node 20 or 22 LTS)
-  # Switched to Node 22 (Active LTS) for maximum stability
-  curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
+  # Node.js (Frappe v16 requires Node >= 24)
+  # Node 24 is the certified LTS for version 16
+  curl -fsSL https://deb.nodesource.com/setup_24.x | bash -
   apt-get install -y nodejs
   
   # Nuclear Path Override: Ensure binaries are visible to all users/environments
@@ -131,9 +131,12 @@ EOF
   ln -sf /usr/bin/npm /usr/local/bin/npm
   ln -sf /usr/bin/npx /usr/local/bin/npx
   
-  # Install Yarn globally (Standard for Bench/Frappe compatibility)
+  # Install Yarn globally and link it
   npm install -g yarn
   ln -sf /usr/local/bin/yarn /usr/bin/yarn || true
+  
+  # Bypass strict Node version checks in Yarn during build
+  yarn config set ignore-engines true -g
   
   # Verify Node/Yarn version
   node -v
@@ -283,6 +286,9 @@ if [ ! -d "frappe-bench" ]; then
   export CI=1
   export YARN_PURE_LOCKFILE=1
   export YARN_NETWORK_TIMEOUT=100000
+  
+  # Force yarn to ignore version mismatches during the bench init internal calls
+  yarn config set ignore-engines true
   
   echo "Diagnostics (frappe user):"
   which node; node -v
