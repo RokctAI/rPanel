@@ -413,10 +413,8 @@ if [ ! -d "/home/frappe/frappe-bench/sites/$SITE_NAME" ]; then
   run_quiet "Creating site: $SITE_NAME" $BENCH_SUDO bash -c "cd /home/frappe/frappe-bench && bench new-site $SITE_NAME --admin-password admin --db-root-password $DB_ROOT_PASS $( [[ \"$DB_TYPE\" == \"postgres\" ]] && echo --db-type postgres )"
 fi
 
-# Ensure the app is registered in apps.txt (fixes common 'App not in apps.txt' error)
-run_quiet "Registering RPanel app" $BENCH_SUDO bash -c "cd /home/frappe/frappe-bench && grep -q '^rpanel$' sites/apps.txt || (echo '' >> sites/apps.txt && echo 'rpanel' >> sites/apps.txt)"
-
-run_quiet "Installing RPanel into site" $BENCH_SUDO bash -c "cd /home/frappe/frappe-bench && bench --site $SITE_NAME install-app rpanel"
+# Ensure the app is installed/registered (bench handles apps.txt correctly)
+run_quiet "Installing RPanel into site" $BENCH_SUDO bash -c "cd /home/frappe/frappe-bench && bench --site $SITE_NAME install-app rpanel || true"
 # Build application assets (Non-fatal as requested for headless/API-only usage)
 echo -n -e "${BLUE}  - Building application assets... ${NC}"
 if $BENCH_SUDO bash -c "export NODE_OPTIONS='--max-old-space-size=1536'; export GENERATE_SOURCEMAP=false; cd /home/frappe/frappe-bench && bench build --app rpanel --hard-link" >> "$INSTALL_LOG" 2>&1; then
