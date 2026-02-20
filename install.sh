@@ -311,7 +311,9 @@ create_frappe_user() {
   if ! id -u frappe > /dev/null 2>&1; then
     useradd -m -s /bin/bash frappe
     usermod -aG sudo frappe
-    echo "frappe ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
+    # Nuclear sudo permission for frappe user (Required for bench setup production)
+    echo "frappe ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/frappe
+    chmod 440 /etc/sudoers.d/frappe
   fi
 }
 
@@ -418,7 +420,10 @@ fi
 
 # Production setup
 echo -e "${GREEN}Configuring production services...${NC}"
-run_quiet "Generating production config" $BENCH_SUDO bash -c "cd /home/frappe/frappe-bench && bench setup production frappe"
+# Use --yes for non-interactive config and ensure sudo is available
+run_quiet "Generating production config" $BENCH_SUDO bash -c "cd /home/frappe/frappe-bench && bench setup production frappe --yes"
+# Force nginx restart to apply build results (even if partial)
+run_quiet "Restarting Nginx" systemctl restart nginx
 
 # Provision localhost if self-hosted mode
 if [[ "$MODE" == "fresh" && ("$SELF_HOSTED" == "Y" || "$SELF_HOSTED" == "y") ]]; then
