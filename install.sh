@@ -106,15 +106,15 @@ install_system_deps() {
     # Install Essential System Tools
     run_quiet "Installing system tools" apt-get install -y git software-properties-common curl redis-server xvfb libfontconfig wkhtmltopdf
     
-    # Install Python 3.12 (Native Noble Version - Most Stable)
-    run_quiet "Installing Python 3.12" apt-get install -y python3.12-dev python3.12-venv python3-pip python-is-python3
+    # Install Python 3.14 (Required for Frappe v16)
+    run_quiet "Installing Python 3.14" apt-get install -y python3.14-dev python3.14-venv python3-pip python-is-python3
     
     # Install Postgres 16 (Native to Noble) + Matching Contrib & Vector
     run_quiet "Installing PostgreSQL 16 & Extensions" apt-get install -y postgresql-16 postgresql-client-16 postgresql-contrib-16 postgresql-16-pgvector libpq-dev
   else
     run_quiet "Updating package lists" apt-get update
     
-    run_quiet "Installing system dependencies" apt-get install -y git python3.12-dev python3.12-venv python3-pip python-is-python3 redis-server software-properties-common mariadb-server mariadb-client xvfb libfontconfig wkhtmltopdf curl build-essential
+    run_quiet "Installing system dependencies" apt-get install -y git python3.14-dev python3.14-venv python3-pip python-is-python3 redis-server software-properties-common mariadb-server mariadb-client xvfb libfontconfig wkhtmltopdf curl build-essential
   fi
   
   # Configure Exim4 for internet mail
@@ -279,20 +279,21 @@ set -e
 export PATH=\$PATH:/home/frappe/.local/bin
 cd /home/frappe
 if [ ! -d "frappe-bench" ]; then
-  python3.12 -m pip install frappe-bench --user -q
+  # Use Python 3.14 (Required for Frappe v16)
+  python3.14 -m pip install frappe-bench --user -q
   
   # Diagnostics and Environment Hardening
   export CI=1
   export YARN_PURE_LOCKFILE=1
-  export YARN_NETWORK_TIMEOUT=200000
+  export YARN_NETWORK_TIMEOUT=300000
   export YARN_CONFIG_IGNORE_ENGINES=true
   
   # Force yarn to ignore version mismatches
   yarn config set ignore-engines true >> "$INSTALL_LOG" 2>&1
   
-  # Initialize bench with stable Python 3.12 (Native Noble)
-  # We use --verbose inside the log for easier debugging if it fails
-  bench init frappe-bench --frappe-branch version-16 --python python3.12 --skip-assets --skip-redis-config-generation --verbose
+  # Initialize bench with Python 3.14
+  # Using --verbose inside the log for easier debugging
+  bench init frappe-bench --frappe-branch version-16 --python python3.14 --skip-assets --skip-redis-config-generation --verbose
 fi
 EOF
 }
