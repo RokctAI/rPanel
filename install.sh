@@ -131,8 +131,8 @@ EOF
   ln -sf /usr/bin/npm /usr/local/bin/npm
   ln -sf /usr/bin/npx /usr/local/bin/npx
   
-  # Install Yarn globally and link it
-  npm install -g yarn@1.22.22
+  # Install Yarn globally (Standard for Bench/Frappe compatibility)
+  npm install -g yarn
   ln -sf /usr/local/bin/yarn /usr/bin/yarn || true
   
   # Verify Node/Yarn version
@@ -279,14 +279,16 @@ export PATH=\$PATH:/home/frappe/.local/bin
 cd /home/frappe
 if [ ! -d "frappe-bench" ]; then
   python3.14 -m pip install frappe-bench --user
-  # Diagnostics
+  # Diagnostics and Environment Hardening
+  export CI=1
+  export YARN_PURE_LOCKFILE=1
+  export YARN_NETWORK_TIMEOUT=100000
+  
   echo "Diagnostics (frappe user):"
   which node; node -v
   which yarn; yarn -v
-  which python3; python3 --version
   
-  # Added --verbose and high timeout for robustness
-  export YARN_NETWORK_TIMEOUT=100000
+  # Added --verbose for diagnostics
   bench init frappe-bench --frappe-branch version-16 --python python3.14 --skip-assets --skip-redis-config-generation --verbose
 fi
 EOF
