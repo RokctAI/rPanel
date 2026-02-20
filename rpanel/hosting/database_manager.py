@@ -14,8 +14,9 @@ def execute_query(database_name, query):
         return {'success': False, 'error': 'Only SELECT queries are allowed'}
     
     try:
-        cmd = f"mysql -u root -e \"{query}\" {database_name} --json"
-        result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+        # Security: Use list to prevent command injection
+        cmd = ["mysql", "-u", "root", "-e", query, database_name, "--json"]
+        result = subprocess.run(cmd, capture_output=True, text=True)
         
         if result.returncode == 0:
             data = json.loads(result.stdout) if result.stdout else []
@@ -30,8 +31,9 @@ def execute_query(database_name, query):
 def get_tables(database_name):
     """Get list of tables in database"""
     try:
-        cmd = f"mysql -u root -e 'SHOW TABLES' {database_name} --json"
-        result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+        # Security: Use list to prevent command injection
+        cmd = ["mysql", "-u", "root", "-e", "SHOW TABLES", database_name, "--json"]
+        result = subprocess.run(cmd, capture_output=True, text=True)
         
         if result.returncode == 0:
             tables = json.loads(result.stdout)
@@ -46,8 +48,9 @@ def get_tables(database_name):
 def get_table_structure(database_name, table_name):
     """Get table structure"""
     try:
-        cmd = f"mysql -u root -e 'DESCRIBE {table_name}' {database_name} --json"
-        result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+        # Security: Use list to prevent command injection
+        cmd = ["mysql", "-u", "root", "-e", f"DESCRIBE {table_name}", database_name, "--json"]
+        result = subprocess.run(cmd, capture_output=True, text=True)
         
         if result.returncode == 0:
             structure = json.loads(result.stdout)
@@ -65,12 +68,16 @@ def export_database(database_name, export_format='sql'):
         export_file = f"/tmp/{database_name}_export.{export_format}"
         
         if export_format == 'sql':
-            cmd = f"mysqldump -u root {database_name} > {export_file}"
+            # Security: Use list and redirect stdout to file
+            cmd = ["mysqldump", "-u", "root", database_name]
+            with open(export_file, 'w') as f:
+                subprocess.run(cmd, stdout=f, check=True)
         elif export_format == 'csv':
-            # Export all tables to CSV
-            cmd = f"mysql -u root -e 'SELECT * FROM table_name' {database_name} > {export_file}"
-        
-        subprocess.run(cmd, shell=True, check=True)
+            # Security: Use list and redirect stdout to file
+            query = "SELECT * FROM table_name" # Note: table_name needs to be handle correctly if dynamic
+            cmd = ["mysql", "-u", "root", "-e", query, database_name]
+            with open(export_file, 'w') as f:
+                subprocess.run(cmd, stdout=f, check=True)
         
         return {'success': True, 'file_path': export_file}
     except Exception as e:
@@ -81,8 +88,10 @@ def export_database(database_name, export_format='sql'):
 def import_database(database_name, import_file):
     """Import database from SQL file"""
     try:
-        cmd = f"mysql -u root {database_name} < {import_file}"
-        subprocess.run(cmd, shell=True, check=True)
+        # Security: Use list and redirect stdin from file
+        cmd = ["mysql", "-u", "root", database_name]
+        with open(import_file, 'r') as f:
+            subprocess.run(cmd, stdin=f, check=True)
         
         return {'success': True, 'message': 'Database imported'}
     except Exception as e:
