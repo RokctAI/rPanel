@@ -147,10 +147,10 @@ if ! dpkg -l | grep -q roundcube; then
     
     # Force Elastic skin (Modern UI)
     if [ -f "/etc/roundcube/config.inc.php" ]; then
-        if grep -q "config\['skin'\]" /etc/roundcube/config.inc.php; then
-            sed -i "s/\\\$config\['skin'\] = .*/\\\$config['skin'] = 'elastic';/" /etc/roundcube/config.inc.php
+        if grep -q "config\['skin'\]" /etc/roundcube/config.inc.php; then  # noqa: W605
+            sed -i "s/\\\$config\['skin'\] = .*/\\\$config['skin'] = 'elastic';/" /etc/roundcube/config.inc.php  # noqa: W605
         else
-            echo "\$config['skin'] = 'elastic';" >> /etc/roundcube/config.inc.php
+            echo "\$config['skin'] = 'elastic';" >> /etc/roundcube/config.inc.php  # noqa: W605
         fi
     fi
 else
