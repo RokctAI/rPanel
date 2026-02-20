@@ -105,7 +105,7 @@ def search_logs(website_name, log_type, search_term, lines=500):
 
 
 @frappe.whitelist()
-def tail_log(website_name, log_type, since_timestamp=None):
+def tail_log(website_name, log_type, since_timestamp=None):  # noqa: C901
     """Get new log entries since timestamp (for live updates)"""
     
     # Get log file path
