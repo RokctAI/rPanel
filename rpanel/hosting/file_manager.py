@@ -170,7 +170,7 @@ def delete_file(website_name, file_path):
         
         return {
             'success': True,
-            'message': f'Deleted successfully'
+            'message': 'Deleted successfully'
         }
     
     except Exception as e:
@@ -247,7 +247,7 @@ def rename_file(website_name, old_path, new_name):
         
         return {
             'success': True,
-            'message': f'Renamed successfully',
+            'message': 'Renamed successfully',
             'new_path': os.path.join(os.path.dirname(old_path), new_name)
         }
     
