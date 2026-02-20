@@ -22,7 +22,7 @@ class CronJob(Document):
         try:
             croniter(expression)
             return True
-        except:
+        except (ValueError, KeyError, TypeError):
             return False
     
     def get_next_run_time(self):
