@@ -19,6 +19,57 @@ chmod 666 "$INSTALL_LOG"
 
 echo -e "${BLUE}Detailed logs available at: $INSTALL_LOG${NC}"
 
+# Hardcoded administrative password (as requested)
+DB_ROOT_PASS="rpanel_secure_db_pass"
+
+# Determine deployment mode
+MODE="${DEPLOY_MODE:-fresh}"
+DB_TYPE="${DB_TYPE:-postgres}"
+
+if [[ "$MODE" != "fresh" && "$MODE" != "bench" ]]; then
+  echo -e "${RED}Invalid DEPLOY_MODE: $MODE. Use 'fresh' or 'bench'.${NC}"
+  echo ""
+  echo "Modes:"
+  echo "  fresh - Full VPS setup (system packages, MariaDB, Bench, RPanel)"
+  echo "  bench - Add RPanel to existing Frappe bench"
+  echo ""
+  exit 1
+fi
+
+echo -e "${GREEN}Deploy mode: $MODE${NC}"
+
+# Non-interactive mode for CI
+if [[ "$CI" == "true" || "$NON_INTERACTIVE" == "true" ]]; then
+  echo -e "${GREEN}CI environment detected. Using automated defaults.${NC}"
+  DOMAIN_NAME=${DOMAIN_NAME:-rpanel.local}
+  SELF_HOSTED=${SELF_HOSTED:-Y}
+  SKIP_SSL=true
+else
+  # Prompt for domain in fresh mode
+  if [[ "$MODE" == "fresh" ]]; then
+    echo -e "${BLUE}=================================================${NC}"
+    echo -e "${BLUE}Domain Configuration${NC}"
+    echo -e "${BLUE}=================================================${NC}"
+    echo ""
+    read -p "Enter your domain name (or press Enter for rpanel.local): " DOMAIN_NAME
+    DOMAIN_NAME=${DOMAIN_NAME:-rpanel.local}
+    echo -e "${GREEN}Using domain: $DOMAIN_NAME${NC}"
+    echo ""
+    
+    echo -e "${BLUE}=================================================${NC}"
+    echo -e "${BLUE}Hosting Mode${NC}"
+    echo -e "${BLUE}=================================================${NC}"
+    echo ""
+    echo "Will this server also host websites?"
+    echo "  Yes - Install hosting services (PHP, Nginx, email, etc.) on this server"
+    echo "  No  - Use this as a control panel only (manage remote servers)"
+    echo ""
+    read -p "Host websites on this server? (Y/n): " SELF_HOSTED
+    SELF_HOSTED=${SELF_HOSTED:-Y}
+    echo ""
+  fi
+fi
+
 # Helper to run commands quietly but log details
 run_quiet() {
   local msg="$1"
@@ -305,7 +356,6 @@ bench --site \$SITE_NAME install-app rpanel
 bench build --app rpanel
 EOF
 echo -e "${GREEN}✓ RPanel app and site configured${NC}"
-echo -e "${GREEN}✓ RPanel app and site configured${NC}"
 
 # Production setup
 echo -e "${GREEN}Configuring production services...${NC}"
@@ -349,7 +399,3 @@ echo -e "${BLUE}Admin Password: admin${NC}"
 echo ""
 echo -e "${GREEN}Email service (Exim4) is configured and running.${NC}"
 echo -e "${GREEN}RPanel can now send email notifications.${NC}"
-
-
-# Final output
-echo -e "${GREEN}Installation complete!${NC}"
