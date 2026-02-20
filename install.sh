@@ -75,7 +75,8 @@ run_quiet() {
   local msg="$1"
   shift
   echo -n -e "${BLUE}  - $msg... ${NC}"
-  if "$@" >> "$INSTALL_LOG" 2>&1; then
+  # Propagate stdin to the command to support heredocs
+  if "$@" <&0 >> "$INSTALL_LOG" 2>&1; then
     echo -e "${GREEN}✓ DONE${NC}"
   else
     echo -e "${RED}✗ FAILED${NC}"
@@ -100,24 +101,20 @@ install_system_deps() {
     run_quiet "Downloading PostgreSQL key" curl -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc --fail https://www.postgresql.org/media/keys/ACCC4CF8.asc
     sh -c 'echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
     
-    # Add Python 3.13 (Stable Fleet Version)
-    run_quiet "Adding Python PPA" add-apt-repository -y ppa:deadsnakes/ppa
     run_quiet "Updating package lists" apt-get update
 
     # Install Essential System Tools
     run_quiet "Installing system tools" apt-get install -y git software-properties-common curl redis-server xvfb libfontconfig wkhtmltopdf
     
-    # Install Python 3.13 (Stable Fleet Version)
-    run_quiet "Installing Python 3.13" apt-get install -y python3.13-dev python3.13-venv python3-pip python-is-python3
+    # Install Python 3.12 (Native Noble Version - Most Stable)
+    run_quiet "Installing Python 3.12" apt-get install -y python3.12-dev python3.12-venv python3-pip python-is-python3
     
     # Install Postgres 16 (Native to Noble) + Matching Contrib & Vector
     run_quiet "Installing PostgreSQL 16 & Extensions" apt-get install -y postgresql-16 postgresql-client-16 postgresql-contrib-16 postgresql-16-pgvector libpq-dev
   else
-    # Add Python 3.13 (Stable Fleet Version)
-    run_quiet "Adding Python PPA" add-apt-repository -y ppa:deadsnakes/ppa
     run_quiet "Updating package lists" apt-get update
     
-    run_quiet "Installing system dependencies" apt-get install -y git python3.13-dev python3.13-venv python3-pip python-is-python3 redis-server software-properties-common mariadb-server mariadb-client xvfb libfontconfig wkhtmltopdf curl build-essential
+    run_quiet "Installing system dependencies" apt-get install -y git python3.12-dev python3.12-venv python3-pip python-is-python3 redis-server software-properties-common mariadb-server mariadb-client xvfb libfontconfig wkhtmltopdf curl build-essential
   fi
   
   # Configure Exim4 for internet mail
@@ -276,24 +273,26 @@ create_frappe_user() {
 # Helper to install Bench (fresh or bench mode)
 install_bench() {
   echo -e "${GREEN}Installing Bench...${NC}"
+  # Fixing stdin propagation for bench init
   run_quiet "Initializing Frappe Bench (this may take a few minutes)" sudo -u frappe -i -H env HOME=/home/frappe XDG_CONFIG_HOME=/home/frappe/.config XDG_DATA_HOME=/home/frappe/.local/share PATH="/home/frappe/.local/bin:/usr/bin:/usr/local/bin:$PATH" bash <<EOF
 set -e
 export PATH=\$PATH:/home/frappe/.local/bin
 cd /home/frappe
 if [ ! -d "frappe-bench" ]; then
-  python3.13 -m pip install frappe-bench --user -q
+  python3.12 -m pip install frappe-bench --user -q
   
   # Diagnostics and Environment Hardening
   export CI=1
   export YARN_PURE_LOCKFILE=1
-  export YARN_NETWORK_TIMEOUT=100000
+  export YARN_NETWORK_TIMEOUT=200000
   export YARN_CONFIG_IGNORE_ENGINES=true
   
-  # Force yarn to ignore version mismatches during the bench init internal calls
+  # Force yarn to ignore version mismatches
   yarn config set ignore-engines true >> "$INSTALL_LOG" 2>&1
   
-  # Initialize bench with stable Python 3.13
-  bench init frappe-bench --frappe-branch version-16 --python python3.13 --skip-assets --skip-redis-config-generation
+  # Initialize bench with stable Python 3.12 (Native Noble)
+  # We use --verbose inside the log for easier debugging if it fails
+  bench init frappe-bench --frappe-branch version-16 --python python3.12 --skip-assets --skip-redis-config-generation --verbose
 fi
 EOF
 }
