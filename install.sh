@@ -101,7 +101,7 @@ install_system_deps() {
     add-apt-repository -y ppa:deadsnakes/ppa
     apt-get update
     
-    apt-get install -y git python3.14-dev python3.14-venv python3-pip python-is-python3 redis-server software-properties-common mariadb-server mariadb-client xvfb libfontconfig wkhtmltopdf curl
+    apt-get install -y git python3.14-dev python3.14-venv python3-pip python-is-python3 redis-server software-properties-common mariadb-server mariadb-client xvfb libfontconfig wkhtmltopdf curl build-essential
   fi
   
   # Configure Exim4 for internet mail
@@ -126,14 +126,14 @@ EOF
   curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
   apt-get install -y nodejs
   
-  # Nuclear Path Override: CI environments often have Node pre-installed in /usr/local/bin
-  # which shadows the version we just installed in /usr/bin.
+  # Nuclear Path Override: Ensure binaries are visible to all users/environments
   ln -sf /usr/bin/node /usr/local/bin/node
   ln -sf /usr/bin/npm /usr/local/bin/npm
   ln -sf /usr/bin/npx /usr/local/bin/npx
   
-  # Install Yarn globally (Standard for Bench/Frappe compatibility)
+  # Install Yarn globally and link it
   npm install -g yarn@1.22.22
+  ln -sf /usr/local/bin/yarn /usr/bin/yarn || true
   
   # Verify Node/Yarn version
   node -v
@@ -279,7 +279,13 @@ export PATH=\$PATH:/home/frappe/.local/bin
 cd /home/frappe
 if [ ! -d "frappe-bench" ]; then
   python3.14 -m pip install frappe-bench --user
-  # Added --verbose for diagnostics and ensuring yarn is definitely available
+  # Diagnostics
+  echo "Diagnostics (frappe user):"
+  which node; node -v
+  which yarn; yarn -v
+  which python3; python3 --version
+  
+  # Added --verbose and high timeout for robustness
   export YARN_NETWORK_TIMEOUT=100000
   bench init frappe-bench --frappe-branch version-16 --python python3.14 --skip-assets --skip-redis-config-generation --verbose
 fi
