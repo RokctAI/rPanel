@@ -20,7 +20,7 @@ def test_connection(server_name):
     try:
         client = get_ssh_client(server)
         stdin, stdout, stderr = client.exec_command('echo "Connection successful"')
-        result = stdout.read().decode()
+        stdout.read().decode()
         client.close()
         
         server.db_set('health_status', 'Healthy')
