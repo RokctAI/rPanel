@@ -3,7 +3,7 @@
 # RPanel Flexible Installer
 # Usage: DEPLOY_MODE=[fresh|bench|dependency] ./install.sh
 # Default mode is "fresh" (full VPS install).
-INSTALLER_VERSION="v7.4-SWAP-RELIABLE"
+INSTALLER_VERSION="v7.5-FINAL-CI-FIX"
 
 echo -e "\033[0;34mRPanel Installer Version: $INSTALLER_VERSION\033[0;0m"
 
@@ -411,15 +411,18 @@ fi
 run_quiet "Setting up Redis config" $BENCH_SUDO bash -c "cd /home/frappe/frappe-bench && bench setup redis"
 
 SITE_NAME="${DOMAIN_NAME:-rpanel.local}"
+# Declare absolute bench path
+BENCH_BIN="/home/frappe/.local/bin/bench"
+
 if [ ! -d "/home/frappe/frappe-bench/sites/$SITE_NAME" ]; then
-  run_quiet "Creating site: $SITE_NAME" $BENCH_SUDO bash -c "cd /home/frappe/frappe-bench && bench new-site $SITE_NAME --admin-password admin --db-root-password $DB_ROOT_PASS $( [[ \"$DB_TYPE\" == \"postgres\" ]] && echo --db-type postgres )"
+  run_quiet "Creating site: $SITE_NAME" $BENCH_SUDO bash -c "cd /home/frappe/frappe-bench && $BENCH_BIN new-site $SITE_NAME --admin-password admin --db-root-password $DB_ROOT_PASS $( [[ \"$DB_TYPE\" == \"postgres\" ]] && echo --db-type postgres )"
 fi
 
 # Ensure the app is installed/registered (bench handles apps.txt correctly)
-run_quiet "Installing RPanel into site" $BENCH_SUDO bash -c "cd /home/frappe/frappe-bench && bench --site $SITE_NAME install-app rpanel || true"
+run_quiet "Installing RPanel into site" $BENCH_SUDO bash -c "cd /home/frappe/frappe-bench && $BENCH_BIN --site $SITE_NAME install-app rpanel || true"
 # Build application assets (Non-fatal as requested for headless/API-only usage)
 echo -n -e "${BLUE}  - Building application assets... ${NC}"
-if $BENCH_SUDO bash -c "export NODE_OPTIONS='--max-old-space-size=1536'; export GENERATE_SOURCEMAP=false; cd /home/frappe/frappe-bench && bench build --app rpanel --hard-link" >> "$INSTALL_LOG" 2>&1; then
+if $BENCH_SUDO bash -c "export NODE_OPTIONS='--max-old-space-size=1536'; export GENERATE_SOURCEMAP=false; cd /home/frappe/frappe-bench && $BENCH_BIN build --app rpanel --hard-link" >> "$INSTALL_LOG" 2>&1; then
   echo -e "${GREEN}✓ DONE${NC}"
 else
   echo -e "${YELLOW}! FAILED (Non-fatal)${NC}"
@@ -428,10 +431,18 @@ fi
 
 # Production setup
 echo -e "${GREEN}Configuring production services...${NC}"
-# Use direct sudo --yes for non-interactive config to ensure it has root privileges to write /etc/nginx and /etc/supervisor
-run_quiet "Generating production config" sudo -u frappe -i -H bench setup production frappe --yes
-# Force nginx restart to apply build results (even if partial)
+
+# Define the absolute path to bench to avoid "command not found" errors in CI
+BENCH_BIN="/home/frappe/.local/bin/bench"
+
+# Run production setup with explicit PATH and absolute binary
+run_quiet "Generating production config" sudo -u frappe -i -H env PATH="/home/frappe/.local/bin:$PATH" "$BENCH_BIN" setup production frappe --yes
+
+# Fix directory permissions so Nginx/www-data can traverse the frappe home directory (Mandatory for CI)
+run_quiet "Applying directory permissions for Nginx" chmod o+x /home/frappe /home/frappe/frappe-bench /home/frappe/frappe-bench/sites
+
 run_quiet "Restarting Nginx" systemctl restart nginx
+run_quiet "Restarting Supervisor" systemctl restart supervisor
 
 # Provision localhost if self-hosted mode
 if [[ "$MODE" == "fresh" && ("$SELF_HOSTED" == "Y" || "$SELF_HOSTED" == "y") ]]; then
