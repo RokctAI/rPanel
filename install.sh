@@ -3,7 +3,7 @@
 # RPanel Flexible Installer
 # Usage: DEPLOY_MODE=[fresh|bench|dependency] ./install.sh
 # Default mode is "fresh" (full VPS install).
-INSTALLER_VERSION="v7.9-PYTHON-MODULE-FIX"
+INSTALLER_VERSION="v8.0-CI-GIGA-CLEAN"
 
 echo -e "\033[0;34mRPanel Installer Version: $INSTALLER_VERSION\033[0;0m"
 
@@ -434,18 +434,16 @@ fi
 # Production setup
 echo -e "${GREEN}Configuring production services...${NC}"
 
-# Ensure Supervisor is explicitly installed (Mandatory for production config generation)
+# 1. Ensure Supervisor is ready
 run_quiet "Installing Supervisor" apt-get install -y -qq -o=Dpkg::Use-Pty=0 supervisor
 run_quiet "Starting Supervisor" systemctl restart supervisor
 
-# 1. Identify the frappe user's site-packages to prevent ModuleNotFoundError
-# This ensures root can "see" the bench library installed by the frappe user
-FRAPPE_PYTHON_PATH=$(sudo -u frappe -i -H python3 -c "import site; print(site.getusersitepackages())")
+# Define the absolute path to the bench binary
+BENCH_BIN="/home/frappe/.local/bin/bench"
 
-# 2. THE ULTIMATE FIX: Call the bench module through the frappe user's python
-# This avoids ModuleNotFoundError by using the specific environment where bench is installed.
-# We run as root so it has the permissions to write to /etc/nginx and /etc/supervisor.
-run_quiet "Generating production config" sudo -H env PATH="/home/frappe/.local/bin:$PATH" PYTHONPATH="$FRAPPE_PYTHON_PATH" python3 -m bench setup production frappe --yes --user frappe
+# 2. THE FINAL CI BRIDGE: Execute the bench binary as root but using the full path.
+# This bypasses 'python -m bench' and lets the binary's hashbang find its own environment.
+run_quiet "Generating production config" sudo -H env PATH="/home/frappe/.local/bin:$PATH" "$BENCH_BIN" setup production frappe --yes --user frappe
 
 # 3. Manual override if Bench fails to link (the "Nuclear Option")
 if [ ! -f /etc/nginx/conf.d/frappe.conf ] && [ -f /home/frappe/frappe-bench/config/nginx.conf ]; then
