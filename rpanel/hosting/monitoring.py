@@ -127,10 +127,10 @@ def check_disk_space(website_name):
     website = frappe.get_doc('Hosted Website', website_name)
     
     try:
-        # Get disk usage using du command
-        cmd = f"du -sm {website.site_path}"
+        # Get disk usage using du command (Security: Use list)
+        cmd = ["du", "-sm", website.site_path]
         result = subprocess.run(
-            shlex.split(cmd),
+            cmd,
             capture_output=True,
             text=True,
             timeout=30
@@ -164,9 +164,9 @@ def get_error_logs(website_name, limit=100):
     
     try:
         if os.path.exists(error_log):
-            cmd = f"tail -n {limit} {error_log}"
+            cmd = ["tail", "-n", str(limit), error_log]
             result = subprocess.run(
-                shlex.split(cmd),
+                cmd,
                 capture_output=True,
                 text=True,
                 timeout=10
@@ -295,17 +295,23 @@ def get_website_metrics(website):
         # Get Nginx access log stats for requests
         access_log = f"/var/log/nginx/{website.domain}_access.log"
         if os.path.exists(access_log):
-            # Count requests in last 5 minutes
-            cmd = f"tail -n 1000 {access_log} | wc -l"
-            result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
-            metrics['request_count'] = int(result.stdout.strip()) if result.returncode == 0 else 0
+            # Count requests in last 5 minutes (Avoid shell=True by running tail then processing in Python)
+            cmd = ["tail", "-n", "1000", access_log]
+            result = subprocess.run(cmd, capture_output=True, text=True)
+            if result.returncode == 0:
+                metrics['request_count'] = len(result.stdout.strip().split('\n')) if result.stdout.strip() else 0
+            else:
+                metrics['request_count'] = 0
         
         # Get error count
         error_log = f"/var/log/nginx/{website.domain}_error.log"
         if os.path.exists(error_log):
-            cmd = f"tail -n 100 {error_log} | wc -l"
-            result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
-            metrics['error_count'] = int(result.stdout.strip()) if result.returncode == 0 else 0
+            cmd = ["tail", "-n", "100", error_log]
+            result = subprocess.run(cmd, capture_output=True, text=True)
+            if result.returncode == 0:
+                metrics['error_count'] = len(result.stdout.strip().split('\n')) if result.stdout.strip() else 0
+            else:
+                metrics['error_count'] = 0
         
         # CPU and memory would require more complex monitoring (can use psutil or system commands)
         # For now, set to 0 (can be enhanced)
