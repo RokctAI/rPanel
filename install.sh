@@ -3,7 +3,7 @@
 # RPanel Flexible Installer
 # Usage: DEPLOY_MODE=[fresh|bench|dependency] ./install.sh
 # Default mode is "fresh" (full VPS install).
-INSTALLER_VERSION="v7.7-LEGACY-PROD-FIX"
+INSTALLER_VERSION="v7.8-PYTHONPATH-FIX"
 
 echo -e "\033[0;34mRPanel Installer Version: $INSTALLER_VERSION\033[0;0m"
 
@@ -441,9 +441,18 @@ run_quiet "Starting Supervisor" systemctl restart supervisor
 # Define the absolute path to bench
 BENCH_BIN="/home/frappe/.local/bin/bench"
 
-# Run production setup as root but targeting the frappe user.
-# In CI, running bench setup production as root with --user is often the most stable way to bypass privilege barriers.
-run_quiet "Generating production config" env PATH="/home/frappe/.local/bin:$PATH" "$BENCH_BIN" setup production frappe --yes --user frappe
+# 1. Identify the frappe user's site-packages to prevent ModuleNotFoundError
+# This ensures root can "see" the bench library installed by the frappe user
+FRAPPE_PYTHON_PATH=$(sudo -u frappe -i -H python3 -c "import site; print(site.getusersitepackages())")
+
+# 2. Run production setup as root but targeting the frappe user.
+# We use 'env' to inject PYTHONPATH for the 'ModuleNotFoundError' fix.
+run_quiet "Generating production config" sudo -H env PATH="/home/frappe/.local/bin:$PATH" PYTHONPATH="$FRAPPE_PYTHON_PATH" "$BENCH_BIN" setup production frappe --yes --user frappe
+
+# 3. Manual override if Bench fails to link (the "Nuclear Option")
+if [ ! -f /etc/nginx/conf.d/frappe.conf ] && [ -f /home/frappe/frappe-bench/config/nginx.conf ]; then
+    run_quiet "Emergency Nginx link" ln -sf /home/frappe/frappe-bench/config/nginx.conf /etc/nginx/conf.d/frappe.conf
+fi
 
 # Fix directory permissions so Nginx/www-data can traverse the frappe home directory (Mandatory for CI)
 run_quiet "Applying directory permissions for Nginx" chmod o+x /home/frappe /home/frappe/frappe-bench /home/frappe/frappe-bench/sites
