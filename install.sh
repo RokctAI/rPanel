@@ -407,9 +407,14 @@ fi
 run_quiet "Registering RPanel app" $BENCH_SUDO bash -c "cd /home/frappe/frappe-bench && grep -q '^rpanel$' sites/apps.txt || (echo '' >> sites/apps.txt && echo 'rpanel' >> sites/apps.txt)"
 
 run_quiet "Installing RPanel into site" $BENCH_SUDO bash -c "cd /home/frappe/frappe-bench && bench --site $SITE_NAME install-app rpanel"
-# Use --hard-link to save disk space/IO. Removing --production as it sometimes increases memory spikes.
-# Adding export NODE_OPTIONS again inside bash -c for redundancy
-run_quiet "Building application assets" $BENCH_SUDO bash -c "export NODE_OPTIONS='--max-old-space-size=1536'; export GENERATE_SOURCEMAP=false; cd /home/frappe/frappe-bench && free -m >> \"$INSTALL_LOG\" 2>&1 && bench build --app rpanel --hard-link"
+# Build application assets (Non-fatal as requested for headless/API-only usage)
+echo -n -e "${BLUE}  - Building application assets... ${NC}"
+if $BENCH_SUDO bash -c "export NODE_OPTIONS='--max-old-space-size=1536'; export GENERATE_SOURCEMAP=false; cd /home/frappe/frappe-bench && bench build --app rpanel --hard-link" >> "$INSTALL_LOG" 2>&1; then
+  echo -e "${GREEN}✓ DONE${NC}"
+else
+  echo -e "${YELLOW}! FAILED (Non-fatal)${NC}"
+  echo -e "${BLUE}    Note: Desk UI assets may be missing, but the API remains functional.${NC}"
+fi
 
 # Production setup
 echo -e "${GREEN}Configuring production services...${NC}"
