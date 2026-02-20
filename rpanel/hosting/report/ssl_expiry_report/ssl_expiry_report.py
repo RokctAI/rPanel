@@ -4,10 +4,12 @@
 import frappe
 from frappe import _
 
+
 def execute(filters=None):
     columns = get_columns()
     data = get_data(filters)
     return columns, data
+
 
 def get_columns():
     return [
@@ -56,12 +58,13 @@ def get_columns():
         }
     ]
 
+
 def get_data(filters):
     conditions = get_conditions(filters)
-    
+
     # Get all websites with SSL
     websites = frappe.db.sql(f"""
-        SELECT 
+        SELECT
             name as domain,
             ssl_status,
             ssl_issuer,
@@ -69,28 +72,29 @@ def get_data(filters):
             status,
             site_path,
             DATEDIFF(ssl_expiry_date, CURDATE()) as days_until_expiry
-        FROM 
+        FROM
             `tabHosted Website`
-        WHERE 
+        WHERE
             ssl_status = 'Active'
             {conditions}
-        ORDER BY 
+        ORDER BY
             days_until_expiry ASC
     """, as_dict=1)
-    
+
     return websites
+
 
 def get_conditions(filters):
     conditions = ""
-    
+
     if filters.get("domain"):
         conditions += f" AND name LIKE '%{filters.get('domain')}%'"
-    
+
     if filters.get("expiring_within_days"):
         days = filters.get("expiring_within_days")
         conditions += f" AND DATEDIFF(ssl_expiry_date, CURDATE()) <= {days}"
-    
+
     if filters.get("status"):
         conditions += f" AND status = '{filters.get('status')}'"
-    
+
     return conditions

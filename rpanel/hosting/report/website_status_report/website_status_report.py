@@ -4,11 +4,13 @@
 import frappe
 from frappe import _
 
+
 def execute(filters=None):
     columns = get_columns()
     data = get_data(filters)
     chart = get_chart_data(data)
     return columns, data, None, chart
+
 
 def get_columns():
     return [
@@ -69,11 +71,12 @@ def get_columns():
         }
     ]
 
+
 def get_data(filters):
     conditions = get_conditions(filters)
-    
+
     websites = frappe.db.sql(f"""
-        SELECT 
+        SELECT
             hw.name as domain,
             hw.status,
             hw.site_type,
@@ -82,58 +85,60 @@ def get_data(filters):
             hw.ssl_status,
             hw.db_name,
             hw.creation,
-            (SELECT COUNT(*) FROM `tabHosted Email Account` 
+            (SELECT COUNT(*) FROM `tabHosted Email Account`
              WHERE parent = hw.name) as email_count
-        FROM 
+        FROM
             `tabHosted Website` hw
-        WHERE 
+        WHERE
             1=1
             {conditions}
-        ORDER BY 
+        ORDER BY
             hw.creation DESC
     """, as_dict=1)
-    
+
     return websites
+
 
 def get_conditions(filters):
     conditions = ""
-    
+
     if filters.get("domain"):
         conditions += f" AND hw.name LIKE '%{filters.get('domain')}%'"
-    
+
     if filters.get("status"):
         conditions += f" AND hw.status = '{filters.get('status')}'"
-    
+
     if filters.get("site_type"):
         conditions += f" AND hw.site_type = '{filters.get('site_type')}'"
-    
+
     if filters.get("ssl_status"):
         conditions += f" AND hw.ssl_status = '{filters.get('ssl_status')}'"
-    
+
     if filters.get("from_date"):
         conditions += f" AND hw.creation >= '{filters.get('from_date')}'"
-    
+
     if filters.get("to_date"):
         conditions += f" AND hw.creation <= '{filters.get('to_date')}'"
-    
+
     return conditions
+
 
 def get_chart_data(data):
     """Generate chart showing website status distribution"""
     status_count = {}
     ssl_count = {"Active": 0, "Inactive": 0}
-    
+
     for row in data:
         # Status distribution
         status = row.get("status", "Unknown")
         status_count[status] = status_count.get(status, 0) + 1
-        
+
         # SSL distribution
         if row.get("ssl_status") == "Active":
             ssl_count["Active"] += 1
         else:
             ssl_count["Inactive"] += 1
-    
+
     return {
         "data": {
             "labels": list(status_count.keys()),

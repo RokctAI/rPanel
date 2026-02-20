@@ -5,9 +5,7 @@ import frappe
 from frappe.model.document import Document
 import os
 import subprocess
-import shutil
 import re
-import time
 from rpanel.hosting.utils import run_certbot, update_exim_config
 from rpanel.hosting.mysql_utils import run_mysql_command
 from rpanel.hosting.system_user_manager import SystemUserManager
@@ -15,16 +13,17 @@ from rpanel.hosting.php_fpm_manager import PHPFPMManager
 from rpanel.hosting.postgres_utils import create_pg_database, run_psql_command
 from rpanel.hosting.service_intelligence import ServiceIntelligence
 
+
 class HostedWebsite(Document):
     def validate(self):  # noqa: C901
         # 0. Check client quota (before creating new site)
         if self.is_new():
             self.check_client_quota()
-        
+
         # 0b. Default DB Engine
         if not self.db_engine:
             self.db_engine = "PostgreSQL"
-        
+
         # 1. Strict Domain Validation (Security)
         # Allow lowercase, numbers, dots, hyphens. No spaces, no semicolons.
         if not re.match(r'^[a-z0-9.-]+$', self.domain):
@@ -55,21 +54,21 @@ class HostedWebsite(Document):
                 frappe.throw("Database Name can only contain alphanumeric characters and underscores.")
             if not re.match(r'^[a-zA-Z0-9_]+$', self.db_user):
                 frappe.throw("Database User can only contain alphanumeric characters and underscores.")
-    
+
     def check_client_quota(self):
         """Check if client has exceeded their website quota"""
         if not self.client:
             return  # No client assigned, skip quota check
-        
+
         # Get client document
         client = frappe.get_doc("Hosting Client", self.client)
-        
+
         # Count existing websites for this client
         existing_count = frappe.db.count("Hosted Website", {
             "client": self.client,
             "name": ["!=", self.name]  # Exclude current site if updating
         })
-        
+
         # Check against limit
         if hasattr(client, 'max_websites') and client.max_websites:
             if existing_count >= client.max_websites:
@@ -105,7 +104,7 @@ class HostedWebsite(Document):
                 if self.has_value_changed("site_type") or self.has_value_changed("cms_type") or self.has_value_changed("db_engine"):
                     self.setup_database()
                     self.install_wordpress()
-        
+
         elif self.status == "Suspended":
             if self.has_value_changed("status"):
                 self.suspend_site()
@@ -126,7 +125,7 @@ class HostedWebsite(Document):
                 user_mgr.create_user(self.system_user)
                 frappe.msgprint(f"Created Linux user: {self.system_user}")
             user_mgr.increment_user_reference(self.system_user, self.domain)
-            
+
             # 0b. Create PHP-FPM pool if using PHP-FPM mode
             if self.php_mode == "PHP-FPM":
                 php_mgr = PHPFPMManager(self.php_version)
@@ -137,7 +136,7 @@ class HostedWebsite(Document):
                 )
                 # Store socket path for nginx config
                 self.php_fpm_socket = socket_path
-            
+
             # 1. Create Directory
             if not os.path.exists(self.site_path):
                 subprocess.run(["sudo", "mkdir", "-p", self.site_path], check=True)
@@ -159,7 +158,7 @@ class HostedWebsite(Document):
             if self.site_type == "CMS" and self.cms_type == "WordPress":
                 self.setup_database()
                 self.install_wordpress()
-            
+
             # 3b. Frappe Tenant Provisioning
             if self.site_type == "Frappe Tenant":
                 self.provision_frappe_tenant()
@@ -187,30 +186,30 @@ class HostedWebsite(Document):
             # Note: This requires the process to have permissions to run bench commands
             # and the db root password must be configured in common_site_config.json or passed somehow.
             # For security, we assume common_site_config.json has the root credentials or we use a specific admin user.
-            
+
             # Check if site exists
             if os.path.exists(os.path.join(frappe.utils.get_bench_path(), "sites", self.domain)):
                 frappe.msgprint("Site directory already exists. Skipping creation.")
             else:
                 # Create site
-                # We need to pass the admin password. 
+                # We need to pass the admin password.
                 # Ideally, we should generate a random one and set it.
                 admin_password = self.db_password or frappe.generate_hash(length=12)
                 self.db_password = admin_password
                 self.save()
-                
+
                 cmd = ["bench", "new-site", self.domain, "--admin-password", admin_password, "--no-mariadb-socket"]
                 # If db_name is set, use it? bench new-site generates its own usually, but we can try to force if needed.
                 # Standard bench new-site uses the site name (domain) as db name usually (sanitized).
-                
+
                 subprocess.run(cmd, check=True, cwd=frappe.utils.get_bench_path())
-            
+
             # 2. Install Apps
             if self.apps_to_install:
                 apps = [app.app_name for app in self.apps_to_install]
                 cmd = ["bench", "--site", self.domain, "install-app"] + apps
                 subprocess.run(cmd, check=True, cwd=frappe.utils.get_bench_path())
-            
+
             # 3. Set App Role (Tenant)
             # We manually edit the site_config.json of the new site
             site_config_path = os.path.join(frappe.utils.get_bench_path(), "sites", self.domain, "site_config.json")
@@ -218,12 +217,12 @@ class HostedWebsite(Document):
                 import json
                 with open(site_config_path, "r") as f:
                     config = json.load(f)
-                
+
                 config["app_role"] = "tenant"
-                
+
                 with open(site_config_path, "w") as f:
                     json.dump(config, f, indent=4)
-            
+
             frappe.msgprint(f"Frappe Tenant {self.domain} created successfully.")
 
         except subprocess.CalledProcessError as e:
@@ -232,30 +231,30 @@ class HostedWebsite(Document):
 
     def install_wordpress(self):
         if os.path.exists(os.path.join(self.site_path, "wp-config.php")):
-            return # Already installed
+            return  # Already installed
 
         frappe.msgprint("Installing WordPress...")
         try:
             # Use WP-CLI to download WordPress (uses version installed on server)
             # This gives admins control over WP version via Service Version management
-            
+
             # 1. Download WordPress using WP-CLI
             subprocess.run([
                 "sudo", "-u", "www-data", "wp", "core", "download",
                 f"--path={self.site_path}",
                 "--allow-root"
             ], check=True)
-            
+
             # 2. Generate wp-config.php
             self.generate_wp_config()
-            
+
             # 2b. Setup PostgreSQL bridge (if needed)
             if self.db_engine == "PostgreSQL":
                 self.setup_wordpress_postgres_bridge()
-            
+
             # 3. Permissions
             subprocess.run(["sudo", "chown", "-R", "www-data:www-data", self.site_path], check=True)
-            
+
             frappe.msgprint("WordPress installed successfully")
 
         except subprocess.CalledProcessError as e:
@@ -305,7 +304,7 @@ require_once ABSPATH . 'wp-settings.php';
             # We can use a pre-installed version on the server or download it.
             # For now, let's assume we maintain a cached copy in /var/lib/rpanel/plugins/
             bridge_source = "/var/lib/rpanel/plugins/pg4wp"
-            
+
             # Cleanup if old repo exists but is empty (archived repo issues)
             if os.path.exists(bridge_source) and not os.listdir(bridge_source):
                 subprocess.run(["sudo", "rm", "-rf", bridge_source], check=True)
@@ -313,26 +312,26 @@ require_once ABSPATH . 'wp-settings.php';
             if not os.path.exists(bridge_source):
                 # Download if missing
                 subprocess.run([
-                    "sudo", "git", "clone", "https://github.com/PostgreSQL-For-Wordpress/postgresql-for-wordpress.git", 
+                    "sudo", "git", "clone", "https://github.com/PostgreSQL-For-Wordpress/postgresql-for-wordpress.git",
                     bridge_source
                 ], check=True)
-            
+
             # 2. Copy db.php to wp-content/
             wp_content = os.path.join(self.site_path, "wp-content")
             subprocess.run(["sudo", "mkdir", "-p", wp_content], check=True)
             subprocess.run([
-                "sudo", "cp", os.path.join(bridge_source, "pg4wp/db.php"), 
+                "sudo", "cp", os.path.join(bridge_source, "pg4wp/db.php"),
                 os.path.join(wp_content, "db.php")
             ], check=True)
-            
+
             # 3. Copy pg4wp directory to wp-content/
             subprocess.run([
-                "sudo", "cp", "-r", os.path.join(bridge_source, "pg4wp"), 
+                "sudo", "cp", "-r", os.path.join(bridge_source, "pg4wp"),
                 wp_content
             ], check=True)
-            
+
             frappe.msgprint("PostgreSQL bridge configured")
-            
+
         except Exception as e:
             frappe.log_error(f"WP PG Bridge Failed: {e}")
             frappe.msgprint(f"Warning: Failed to setup PG bridge. WordPress might not connect. {e}")
@@ -356,7 +355,7 @@ require_once ABSPATH . 'wp-settings.php';
     def update_nginx_config(self, ssl=False):
         """Generates and reloads Nginx config"""
         config_path = f"/etc/nginx/conf.d/{self.domain}.conf"
-        
+
         # Determine which PHP-FPM socket to use
         # Use dedicated socket if available (for isolated pools), otherwise default
         if hasattr(self, 'php_fpm_socket') and self.php_fpm_socket:
@@ -450,7 +449,7 @@ server {{
         for row in self.email_accounts:
              accounts.append({
                  'user': row.email_user,
-                 'password': row.get_password('password'), # Safe retrieval
+                 'password': row.get_password('password'),  # Safe retrieval
                  'forward_to': row.forward_to
              })
 
@@ -507,11 +506,11 @@ server {{
             if hasattr(self, 'php_fpm_socket') and self.php_fpm_socket:
                 php_mgr = PHPFPMManager(self.php_version)
                 php_mgr.delete_pool(self.domain)
-            
+
             # Decrement user reference count and delete if no other sites use it
             user_mgr = SystemUserManager()
             user_mgr.decrement_user_reference(self.system_user, self.domain)
-            
+
             remaining_sites = user_mgr.get_user_reference_count(self.system_user)
             if remaining_sites == 0:
                 # No other sites use this user, safe to delete
@@ -519,7 +518,7 @@ server {{
                 user_mgr.delete_user(self.system_user)
             else:
                 frappe.msgprint(f"User {self.system_user} still used by {remaining_sites} other site(s), preserving...")
-            
+
             # Remove Nginx config
             config_path = f"/etc/nginx/conf.d/{self.domain}.conf"
             if os.path.exists(config_path):
@@ -548,7 +547,7 @@ server {{
                 subprocess.run(["sudo", "mv", "/tmp/suspended.html", suspension_page], check=True)
 
             config_path = f"/etc/nginx/conf.d/{self.domain}.conf"
-            
+
             config_content = f"""
 server {{
     listen 80;
@@ -559,7 +558,7 @@ server {{
     location / {{
         try_files /suspended.html =503;
     }}
-    
+
     error_page 503 /suspended.html;
     location = /suspended.html {{
         internal;

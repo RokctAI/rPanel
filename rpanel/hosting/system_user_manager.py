@@ -13,10 +13,10 @@ from frappe.model.document import Document
 
 class SystemUserManager:
     """Manages system users for website isolation"""
-    
+
     def __init__(self):
         pass
-    
+
     def user_exists(self, username):
         """Check if a Linux user exists"""
         try:
@@ -28,14 +28,14 @@ class SystemUserManager:
             return result.returncode == 0
         except Exception:
             return False
-    
+
     def create_user(self, username):
         """
         Create a Linux system user without sudo privileges
-        
+
         Args:
             username: Username to create
-        
+
         Security:
             - No shell access (/bin/false)
             - No home directory or uses /var/www/{username}
@@ -47,7 +47,7 @@ class SystemUserManager:
             if self.user_exists(username):
                 frappe.msgprint(f"User {username} already exists")
                 return
-            
+
             # Create user with no shell access
             subprocess.run([
                 'sudo', 'useradd',
@@ -56,48 +56,48 @@ class SystemUserManager:
                 '-g', 'www-data',  # Primary group: www-data
                 username
             ], check=True)
-            
+
             # Create web directory for user
             web_dir = f"/var/www/{username}"
             if not os.path.exists(web_dir):
                 subprocess.run(['sudo', 'mkdir', '-p', web_dir], check=True)
                 subprocess.run(['sudo', 'chown', f'{username}:www-data', web_dir], check=True)
                 subprocess.run(['sudo', 'chmod', '750', web_dir], check=True)
-            
+
             frappe.msgprint(f"Created system user: {username}")
-            
+
         except subprocess.CalledProcessError as e:
             frappe.log_error(f"Failed to create user {username}: {e}")
             frappe.throw(f"Failed to create system user: {username}")
-    
+
     def delete_user(self, username):
         """
         Delete a Linux system user
-        
+
         Args:
             username: Username to delete
-        
+
         WARNING: Only call this after verifying reference count is 0
         """
         try:
             if not self.user_exists(username):
                 return
-            
+
             # Delete user
             subprocess.run([
                 'sudo', 'userdel',
                 username
             ], check=True)
-            
+
             frappe.msgprint(f"Deleted system user: {username}")
-            
+
         except subprocess.CalledProcessError as e:
             frappe.log_error(f"Failed to delete user {username}: {e}")
-    
+
     def increment_user_reference(self, username, site_name):
         """
         Increment reference count for a user
-        
+
         Args:
             username: System user name
             site_name: Website domain name
@@ -105,7 +105,7 @@ class SystemUserManager:
         # Check if reference already exists
         if frappe.db.exists("System User Reference", {"user_name": username, "site_name": site_name}):
             return
-        
+
         # Create reference record
         frappe.get_doc({
             "doctype": "System User Reference",
@@ -113,11 +113,11 @@ class SystemUserManager:
             "site_name": site_name
         }).insert(ignore_permissions=True)
         frappe.db.commit()
-    
+
     def decrement_user_reference(self, username, site_name):
         """
         Decrement reference count for a user
-        
+
         Args:
             username: System user name
             site_name: Website domain name
@@ -128,24 +128,24 @@ class SystemUserManager:
             filters={"user_name": username, "site_name": site_name},
             pluck="name"
         )
-        
+
         for ref_name in refs:
             frappe.delete_doc("System User Reference", ref_name, ignore_permissions=True)
-        
+
         frappe.db.commit()
-    
+
     def get_user_reference_count(self, username):
         """
         Get number of sites referencing a user
-        
+
         Args:
             username: System user name
-        
+
         Returns:
             int: Number of sites using this user
         """
         return frappe.db.count("System User Reference", {"user_name": username})
-    
+
     def get_user_info(self, username):
         """Get information about a system user"""
         try:
@@ -169,7 +169,7 @@ def list_system_users():
         GROUP BY user_name
         ORDER BY user_name
     """, as_dict=True)
-    
+
     return {'success': True, 'users': users}
 
 
@@ -182,5 +182,5 @@ def get_user_sites(username):
         fields=["site_name"],
         pluck="site_name"
     )
-    
+
     return {'success': True, 'sites': sites}

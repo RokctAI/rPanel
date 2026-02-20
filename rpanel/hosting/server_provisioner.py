@@ -2,8 +2,8 @@
 # For license information, please see license.txt
 
 import frappe
-import subprocess
 from rpanel.hosting.doctype.hosting_server.hosting_server import execute_remote_command
+
 
 @frappe.whitelist()
 def provision_server(server_name):
@@ -22,9 +22,9 @@ def provision_server(server_name):
     - Fail2Ban
     - UFW (firewall)
     """
-    
+
     server = frappe.get_doc('Hosting Server', server_name)
-    
+
     # Smart installation script - checks and installs only missing services
     install_script = """#!/bin/bash
 set -e
@@ -71,7 +71,7 @@ if ! command -v psql &> /dev/null; then
     apt install -y postgresql postgresql-contrib
     systemctl enable postgresql
     systemctl start postgresql
-    
+
     # Setup standard rpanel role if needed
     # sudo -u postgres psql -c "CREATE ROLE rpanel WITH LOGIN SUPERUSER PASSWORD 'rpanel_secured';"
 else
@@ -144,13 +144,13 @@ echo "[7/12] Checking Roundcube..."
 if ! dpkg -l | grep -q roundcube; then
     echo "Installing Roundcube..."
     DEBIAN_FRONTEND=noninteractive apt install -y roundcube roundcube-core roundcube-mysql roundcube-plugins
-    
+
     # Force Elastic skin (Modern UI)
     if [ -f "/etc/roundcube/config.inc.php" ]; then
-        if grep -q "config\['skin'\]" /etc/roundcube/config.inc.php; then  # noqa: W605
-            sed -i "s/\\\$config\['skin'\] = .*/\\\$config['skin'] = 'elastic';/" /etc/roundcube/config.inc.php  # noqa: W605
+        if grep -q "config\\['skin'\\]" /etc/roundcube/config.inc.php; then
+            sed -i "s/\\\\\\$config\\['skin'\\] = .*/\\\\\\$config['skin'] = 'elastic';/" /etc/roundcube/config.inc.php
         else
-            echo "\$config['skin'] = 'elastic';" >> /etc/roundcube/config.inc.php  # noqa: W605
+            echo "\\$config['skin'] = 'elastic';" >> /etc/roundcube/config.inc.php
         fi
     fi
 else
@@ -250,28 +250,28 @@ echo "  ✓ ClamAV (Malware Scanner)"
 echo "  ✓ Fail2Ban"
 echo "  ✓ UFW (Firewall)"
 """
-    
+
     try:
         # Execute installation script on remote server
         frappe.msgprint("Starting server provisioning... This may take 10-15 minutes.")
-        
+
         result = execute_remote_command(
             server_name=server_name,
             command=install_script,
             timeout=1800  # 30 minutes timeout
         )
-        
+
         if result.get('success'):
             # Update server status
             server.db_set('provisioned', 1)
             server.db_set('health_status', 'Healthy')
-            
+
             frappe.msgprint(f"""
                 <h3>✅ Server Provisioned Successfully!</h3>
                 <p>All services installed and configured on <b>{server.server_name}</b></p>
                 <p>The server is now ready to host websites.</p>
             """)
-            
+
             return {
                 'success': True,
                 'message': 'Server provisioned successfully',
@@ -279,7 +279,7 @@ echo "  ✓ UFW (Firewall)"
             }
         else:
             frappe.throw(f"Provisioning failed: {result.get('error')}")
-            
+
     except Exception as e:
         frappe.log_error(f"Server provisioning failed: {str(e)}")
         return {'success': False, 'error': str(e)}
@@ -288,12 +288,12 @@ echo "  ✓ UFW (Firewall)"
 @frappe.whitelist()
 def check_server_services(server_name):
     """Check which services are installed on the server"""
-    
+
     check_script = """
     echo "Checking installed services..."
-    
+
     services=("nginx" "mariadb" "postgresql" "php8.3-fpm" "php8.2-fpm" "exim4" "certbot" "fail2ban" "ufw")
-    
+
     for service in "${services[@]}"; do
         if systemctl is-active --quiet $service 2>/dev/null || command -v $service &> /dev/null; then
             echo "$service: INSTALLED"
@@ -301,14 +301,14 @@ def check_server_services(server_name):
             echo "$service: NOT INSTALLED"
         fi
     done
-    
+
     # Check WP-CLI
     if command -v wp &> /dev/null; then
         echo "wp-cli: INSTALLED"
     else
         echo "wp-cli: NOT INSTALLED"
     fi
-    
+
     # Check phpMyAdmin
     if [ -d "/usr/share/phpmyadmin" ]; then
         echo "phpmyadmin: INSTALLED"
@@ -316,9 +316,9 @@ def check_server_services(server_name):
         echo "phpmyadmin: NOT INSTALLED"
     fi
     """
-    
+
     result = execute_remote_command(server_name, check_script)
-    
+
     if result.get('success'):
         return {
             'success': True,

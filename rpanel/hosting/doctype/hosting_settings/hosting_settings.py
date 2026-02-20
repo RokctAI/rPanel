@@ -6,7 +6,7 @@ from frappe.model.document import Document
 import subprocess
 import shlex
 import os
-import requests
+
 
 class HostingSettings(Document):
     @frappe.whitelist()
@@ -82,7 +82,7 @@ class HostingSettings(Document):
                 with open(sql_path, 'r') as sql_file:
                     subprocess.run(["sudo", "mysql", db_name], stdin=sql_file, check=True)
             except subprocess.CalledProcessError:
-                pass # Assume tables exist
+                pass  # Assume tables exist
 
             # 4. Configure config.inc.php
             # We need a random DES key for 'des_key'
@@ -133,12 +133,13 @@ $config['skin'] = 'elastic';
             frappe.log_error(f"{description} Failed: {e.stderr}")
             frappe.throw(f"{description} Failed.<br>Error Code: {e.returncode}<br><pre>{e.stderr}</pre>")
 
+
 @frappe.whitelist()
 def get_system_status():
     """Check status of system services"""
     services = ['nginx', 'mysql', 'exim4']
     status = {}
-    
+
     for service in services:
         try:
             result = subprocess.run(
@@ -151,8 +152,9 @@ def get_system_status():
             }
         except Exception:
             status[service] = {'status': 'unknown'}
-    
+
     return status
+
 
 @frappe.whitelist()
 def reload_nginx():
@@ -163,6 +165,7 @@ def reload_nginx():
     except subprocess.CalledProcessError as e:
         frappe.log_error(f"Nginx reload failed: {e}")
         frappe.throw("Failed to reload Nginx")
+
 
 @frappe.whitelist()
 def test_email(email):
@@ -177,4 +180,3 @@ def test_email(email):
     except Exception as e:
         frappe.log_error(f"Test email failed: {e}")
         return {'success': False, 'error': str(e)}
-

@@ -4,6 +4,7 @@ import frappe
 import json
 import os
 
+
 @frappe.whitelist(allow_guest=True)
 def get_version():
     # Path to the directory of this file (rpanel/rpanel/)
@@ -17,5 +18,6 @@ def get_version():
         return versions.get('rpanel', '1.0.0')  # Default fallback
     except Exception:
         return '1.0.0'  # Default fallback in case of any error
+
 
 __version__ = get_version()

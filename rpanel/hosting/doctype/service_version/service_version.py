@@ -3,12 +3,12 @@
 
 import frappe
 from frappe.model.document import Document
-import subprocess
-import re
 from datetime import datetime
+
 
 class ServiceVersion(Document):
     pass
+
 
 @frappe.whitelist()
 def check_service_updates(server_name=None):
@@ -18,24 +18,25 @@ def check_service_updates(server_name=None):
     filters = {}
     if server_name:
         filters['server'] = server_name
-    
+
     services = frappe.get_all('Service Version', filters=filters, fields=['name', 'service_type', 'server'])
-    
+
     for service in services:
         doc = frappe.get_doc('Service Version', service.name)
         _check_version(doc)
         doc.save()
-    
+
     frappe.db.commit()
     return {"success": True, "message": f"Checked {len(services)} services"}
+
 
 def _check_version(doc):
     """Check current and latest version for a service"""
     from rpanel.hosting.doctype.hosting_server.hosting_server import execute_remote_command
-    
+
     server_name = doc.server
     service_type = doc.service_type
-    
+
     # Commands to check versions
     version_commands = {
         'PHP': "php -v | head -n 1 | awk '{print $2}'",
@@ -50,7 +51,7 @@ def _check_version(doc):
         'Exim4': "exim4 --version | head -n 1 | awk '{print $3}'",
         'Dovecot': "dovecot --version | awk '{print $1}'"
     }
-    
+
     # Commands to check latest available version
     latest_commands = {
         'PHP': "apt-cache policy php8.3 | grep Candidate | awk '{print $2}'",
@@ -65,27 +66,28 @@ def _check_version(doc):
         'Exim4': "apt-cache policy exim4 | grep Candidate | awk '{print $2}'",
         'Dovecot': "apt-cache policy dovecot-core | grep Candidate | awk '{print $2}'"
     }
-    
+
     if service_type in version_commands:
         # Get current version
         result = execute_remote_command(server_name, version_commands[service_type])
         if result.get('success'):
             current_version = result.get('output', '').strip()
             doc.current_version = current_version
-        
+
         # Get latest version
         result = execute_remote_command(server_name, latest_commands[service_type])
         if result.get('success'):
             latest_version = result.get('output', '').strip()
             doc.latest_version = latest_version
-            
+
             # Check if update available
             if current_version and latest_version and current_version != latest_version:
                 doc.update_available = 1
             else:
                 doc.update_available = 0
-    
+
     doc.last_checked = datetime.now()
+
 
 @frappe.whitelist()
 def update_service(service_name):
@@ -94,10 +96,10 @@ def update_service(service_name):
     """
     doc = frappe.get_doc('Service Version', service_name)
     from rpanel.hosting.doctype.hosting_server.hosting_server import execute_remote_command
-    
+
     service_type = doc.service_type
     server_name = doc.server
-    
+
     # Update commands
     update_commands = {
         'PHP': "apt-get update && apt-get install --only-upgrade -y php8.3-fpm php8.3-mysql php8.3-curl php8.3-gd php8.3-mbstring php8.3-xml php8.3-zip && systemctl restart php8.3-fpm",
@@ -112,16 +114,16 @@ def update_service(service_name):
         'Exim4': "apt-get update && apt-get install --only-upgrade -y exim4 exim4-daemon-heavy && systemctl restart exim4",
         'Dovecot': "apt-get update && apt-get install --only-upgrade -y dovecot-core dovecot-imapd dovecot-pop3d && systemctl restart dovecot"
     }
-    
+
     if service_type in update_commands:
         result = execute_remote_command(server_name, update_commands[service_type], timeout=600)
-        
+
         if result.get('success'):
             # Re-check version after update
             _check_version(doc)
             doc.save()
             frappe.db.commit()
-            
+
             return {
                 "success": True,
                 "message": f"{service_type} updated successfully to {doc.current_version}",

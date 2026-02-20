@@ -9,6 +9,7 @@ import os
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
+
 @frappe.whitelist()
 def get_email_queue():
     """Get email queue status"""
@@ -21,7 +22,7 @@ def get_email_queue():
             order_by='creation desc',
             limit=100
         )
-        
+
         return {'success': True, 'queue': queue}
     except Exception as e:
         return {'success': False, 'error': str(e)}
@@ -36,10 +37,10 @@ def test_smtp(smtp_server, smtp_port, username, password, use_tls=True):
             server.starttls()
         else:
             server = smtplib.SMTP_SSL(smtp_server, smtp_port)
-        
+
         server.login(username, password)
         server.quit()
-        
+
         return {'success': True, 'message': 'SMTP connection successful'}
     except Exception as e:
         return {'success': False, 'error': str(e)}
@@ -55,7 +56,7 @@ def get_email_logs(limit=100):
             order_by='creation desc',
             limit=limit
         )
-        
+
         return {'success': True, 'logs': logs}
     except Exception as e:
         return {'success': False, 'error': str(e)}
@@ -70,7 +71,7 @@ def retry_failed_emails():
             filters={'status': 'Error'},
             fields=['name']
         )
-        
+
         count = 0
         for email in failed_emails:
             try:
@@ -80,9 +81,9 @@ def retry_failed_emails():
                 count += 1
             except Exception:
                 pass
-        
+
         frappe.db.commit()
-        
+
         return {'success': True, 'retried': count}
     except Exception as e:
         return {'success': False, 'error': str(e)}
@@ -97,7 +98,7 @@ def send_test_email(recipient, subject='Test Email', body='This is a test email 
             subject=subject,
             message=body
         )
-        
+
         return {'success': True, 'message': 'Test email sent'}
     except Exception as e:
         return {'success': False, 'error': str(e)}
@@ -109,11 +110,11 @@ def get_email_stats():
     try:
         # Get counts by status
         stats = {}
-        
+
         for status in ['Sent', 'Not Sent', 'Sending', 'Error']:
             count = frappe.db.count('Email Queue', {'status': status})
             stats[status.lower().replace(' ', '_')] = count
-        
+
         # Get today's sent count
         today = datetime.now().date()
         today_sent = frappe.db.count('Email Queue', {
@@ -121,7 +122,7 @@ def get_email_stats():
             'creation': ['>=', today]
         })
         stats['today_sent'] = today_sent
-        
+
         return {'success': True, 'stats': stats}
     except Exception as e:
         return {'success': False, 'error': str(e)}
@@ -134,18 +135,19 @@ def clear_email_queue():
         # Delete emails older than 30 days
         from datetime import timedelta
         cutoff_date = datetime.now() - timedelta(days=30)
-        
+
         frappe.db.sql("""
             DELETE FROM `tabEmail Queue`
             WHERE status = 'Sent'
             AND creation < %s
         """, (cutoff_date,))
-        
+
         frappe.db.commit()
-        
+
         return {'success': True, 'message': 'Email queue cleared'}
     except Exception as e:
         return {'success': False, 'error': str(e)}
+
 
 @frappe.whitelist()
 def generate_dkim_keys(domain, selector='default'):
@@ -154,7 +156,7 @@ def generate_dkim_keys(domain, selector='default'):
         # Create directory for keys if it doesn't exist
         key_dir = f"/etc/opendkim/keys/{domain}"
         if not os.path.exists(key_dir):
-            # This might fail if not running as root/sudo. 
+            # This might fail if not running as root/sudo.
             # In a real setup, we'd need a privileged helper or pre-created dirs.
             # For now, we'll try to use a local directory if system dir fails
             try:
@@ -167,14 +169,14 @@ def generate_dkim_keys(domain, selector='default'):
         # opendkim-genkey -s selector -d domain -D directory
         cmd = ['opendkim-genkey', '-s', selector, '-d', domain, '-D', key_dir]
         subprocess.run(cmd, check=True)
-        
+
         # Rename private key to standard name
         os.rename(f"{key_dir}/{selector}.private", f"{key_dir}/dkim.private")
-        
+
         # Read public key
         with open(f"{key_dir}/{selector}.txt", 'r') as f:
             public_key_content = f.read()
-            
+
         # Extract the actual p= value from the file
         # The file format is like: default._domainkey IN TXT "v=DKIM1; k=rsa; p=..."
         import re
@@ -192,6 +194,7 @@ def generate_dkim_keys(domain, selector='default'):
     except Exception as e:
         return {'success': False, 'error': str(e)}
 
+
 @frappe.whitelist()
 def get_spf_record(domain, ip_address=None):
     """Generate SPF record for a domain"""
@@ -202,19 +205,20 @@ def get_spf_record(domain, ip_address=None):
             ip_address = socket.gethostbyname(socket.gethostname())
         except (socket.error, OSError):
             ip_address = 'SERVER_IP'
-            
+
     return {
         'record_type': 'TXT',
         'name': '@',
         'value': f"v=spf1 a mx ip4:{ip_address} ~all"
     }
 
+
 @frappe.whitelist()
 def get_dmarc_record(domain, policy='none', email=None):
     """Generate DMARC record for a domain"""
     if not email:
         email = f"admin@{domain}"
-        
+
     return {
         'record_type': 'TXT',
         'name': '_dmarc',

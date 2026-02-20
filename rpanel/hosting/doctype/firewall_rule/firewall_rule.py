@@ -5,23 +5,24 @@ import frappe
 from frappe.model.document import Document
 import subprocess
 
+
 class FirewallRule(Document):
     def on_insert(self):
         """Apply firewall rule on creation"""
         if self.enabled:
             self.apply_rule()
-    
+
     def on_update(self):
         """Update firewall rule"""
         if self.enabled:
             self.apply_rule()
         else:
             self.remove_rule()
-    
+
     def on_trash(self):
         """Remove firewall rule on deletion"""
         self.remove_rule()
-    
+
     def apply_rule(self):
         """Apply UFW firewall rule"""
         try:
@@ -39,12 +40,12 @@ class FirewallRule(Document):
                 cmd.extend(["from", self.ip_address])
                 if self.port != 'any':
                     cmd.extend(["to", "any", "port", str(self.port)])
-            
+
             subprocess.run(cmd, check=True)
-            
+
         except Exception as e:
             frappe.log_error(f"Firewall rule apply failed: {str(e)}")
-    
+
     def remove_rule(self):
         """Remove UFW firewall rule"""
         try:

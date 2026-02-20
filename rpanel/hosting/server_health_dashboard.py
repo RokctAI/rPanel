@@ -4,18 +4,19 @@
 import frappe
 from datetime import datetime, timedelta
 
+
 @frappe.whitelist()
 def get_server_health_dashboard():
     """Get comprehensive server health dashboard data"""
-    
+
     # Get all servers
     servers = frappe.get_all(
         'Hosting Server',
-        fields=['name', 'server_name', 'server_ip', 'server_group', 'status', 
-                'current_websites', 'max_websites', 'cpu_cores', 'ram_gb', 
+        fields=['name', 'server_name', 'server_ip', 'server_group', 'status',
+                'current_websites', 'max_websites', 'cpu_cores', 'ram_gb',
                 'disk_gb', 'health_status', 'last_health_check']
     )
-    
+
     dashboard_data = {
         'servers': [],
         'summary': {
@@ -28,7 +29,7 @@ def get_server_health_dashboard():
         },
         'groups': {}
     }
-    
+
     for server in servers:
         # Get real-time resources if possible
         try:
@@ -42,28 +43,28 @@ def get_server_health_dashboard():
             server['cpu_usage'] = 'N/A'
             server['memory_usage'] = 'N/A'
             server['disk_usage'] = 'N/A'
-        
+
         # Calculate utilization percentage
         if server.max_websites > 0:
             server['utilization'] = round((server.current_websites / server.max_websites) * 100, 1)
         else:
             server['utilization'] = 0
-        
+
         # Add to dashboard
         dashboard_data['servers'].append(server)
-        
+
         # Update summary
         if server.status == 'Active':
             dashboard_data['summary']['active_servers'] += 1
-        
+
         dashboard_data['summary']['total_websites'] += server.current_websites
         dashboard_data['summary']['total_capacity'] += server.max_websites
-        
+
         if server.health_status == 'Healthy':
             dashboard_data['summary']['healthy_servers'] += 1
         else:
             dashboard_data['summary']['unhealthy_servers'] += 1
-        
+
         # Group by server_group
         if server.server_group not in dashboard_data['groups']:
             dashboard_data['groups'][server.server_group] = {
@@ -71,11 +72,11 @@ def get_server_health_dashboard():
                 'websites': 0,
                 'capacity': 0
             }
-        
+
         dashboard_data['groups'][server.server_group]['servers'] += 1
         dashboard_data['groups'][server.server_group]['websites'] += server.current_websites
         dashboard_data['groups'][server.server_group]['capacity'] += server.max_websites
-    
+
     # Calculate overall utilization
     if dashboard_data['summary']['total_capacity'] > 0:
         dashboard_data['summary']['overall_utilization'] = round(
@@ -83,7 +84,7 @@ def get_server_health_dashboard():
         )
     else:
         dashboard_data['summary']['overall_utilization'] = 0
-    
+
     return {'success': True, 'dashboard': dashboard_data}
 
 
@@ -91,14 +92,14 @@ def get_server_health_dashboard():
 def get_server_alerts():
     """Get server alerts and warnings"""
     alerts = []
-    
+
     # Check for unhealthy servers
     unhealthy = frappe.get_all(
         'Hosting Server',
         filters={'health_status': ['!=', 'Healthy']},
         fields=['server_name', 'health_status', 'last_health_check']
     )
-    
+
     for server in unhealthy:
         alerts.append({
             'type': 'error',
@@ -106,7 +107,7 @@ def get_server_alerts():
             'message': f"Server is {server.health_status}",
             'timestamp': server.last_health_check
         })
-    
+
     # Check for servers near capacity
     near_capacity = frappe.db.sql("""
         SELECT server_name, current_websites, max_websites
@@ -114,7 +115,7 @@ def get_server_alerts():
         WHERE current_websites >= max_websites * 0.9
         AND status = 'Active'
     """, as_dict=True)
-    
+
     for server in near_capacity:
         alerts.append({
             'type': 'warning',
@@ -122,7 +123,7 @@ def get_server_alerts():
             'message': f"Near capacity: {server.current_websites}/{server.max_websites} websites",
             'timestamp': datetime.now()
         })
-    
+
     # Check for servers not checked recently
     stale_threshold = datetime.now() - timedelta(hours=1)
     stale_servers = frappe.get_all(
@@ -133,7 +134,7 @@ def get_server_alerts():
         ],
         fields=['server_name', 'last_health_check']
     )
-    
+
     for server in stale_servers:
         alerts.append({
             'type': 'warning',
@@ -141,7 +142,7 @@ def get_server_alerts():
             'message': 'Health check overdue',
             'timestamp': server.last_health_check
         })
-    
+
     return {'success': True, 'alerts': alerts}
 
 

@@ -5,34 +5,37 @@ import frappe
 import subprocess
 import sys
 
+
 def after_install():
     """Run after RPanel installation"""
     import os
-    
+
     if os.environ.get('CI') or os.environ.get('NON_INTERACTIVE'):
         print("CI/Non-Interactive environment detected: Skipping system dependency installs in after_install")
     else:
         print("Installing RPanel dependencies...")
         check_and_install_system_dependencies()
         install_dependencies()
-    
+
     create_default_settings()
-    
+
     # Setup security features
     if not (os.environ.get('CI') or os.environ.get('NON_INTERACTIVE')):
         print("Configuring security features...")
         setup_security_features()
-    
+
     # Setup pgvector
     print("Configuring Database Extensions...")
     setup_vector_extension()
-    
+
     print("RPanel installed successfully!")
+
 
 def after_migrate():
     """Run after migrations"""
     check_dependencies()
     setup_vector_extension()
+
 
 def setup_vector_extension():
     """
@@ -48,6 +51,7 @@ def setup_vector_extension():
         print(f"⚠️ Failed to enable pgvector: {e}")
         return False
 
+
 def install_dependencies():
     """Install Python dependencies"""
     dependencies = [
@@ -62,7 +66,7 @@ def install_dependencies():
         'google-auth-httplib2',
         'google-api-python-client'
     ]
-    
+
     for dep in dependencies:
         try:
             # Try to import the dependency
@@ -77,6 +81,7 @@ def install_dependencies():
             except Exception as e:
                 print(f"✗ Failed to install {dep}: {str(e)}")
 
+
 def check_dependencies():
     """Check if all dependencies are installed"""
     dependencies = [
@@ -87,7 +92,7 @@ def check_dependencies():
         'dnspython',
         'paramiko'
     ]
-    
+
     missing = []
     for dep in dependencies:
         try:
@@ -95,10 +100,11 @@ def check_dependencies():
             __import__(module_name)
         except ImportError:
             missing.append(dep)
-    
+
     if missing:
         print(f"Warning: Missing dependencies: {', '.join(missing)}")
         print("Run: bench --site [site-name] migrate to install them")
+
 
 def create_default_settings():
     """Create default Hosting Settings"""
@@ -126,21 +132,21 @@ def check_and_install_system_dependencies():  # noqa: C901
     """
     import os
     import json
-    
+
     print("\n=== Checking System Dependencies ===")
-    
+
     # Load dependencies from single source of truth
     try:
         deps_file = os.path.join(os.path.dirname(__file__), '..', 'dependencies.json')
         with open(deps_file, 'r') as f:
             all_deps = json.load(f)
-        
+
         # Get system dependencies (hosting services)
         dependencies = all_deps.get('system_dependencies', {})
     except Exception as e:
         print(f"Error: Could not load dependencies.json: {str(e)}")
         return
-    
+
     # OVERRIDE: Force correct ModSecurity package for Ubuntu 24.04
     # This ensures we use the correct package even if dependencies.json is reverted by update
     if 'modsecurity' in dependencies:
@@ -148,23 +154,23 @@ def check_and_install_system_dependencies():  # noqa: C901
             'check': "dpkg -l | grep -q libnginx-mod-http-modsecurity",
             'install': "apt-get install -y libnginx-mod-http-modsecurity"
         })
-    
+
     # Get MariaDB root password from common_site_config.json
     try:
         bench_path = frappe.utils.get_bench_path()
         config_path = os.path.join(bench_path, 'sites', 'common_site_config.json')
-        
+
         with open(config_path, 'r') as f:
             config = json.load(f)
-        
+
         db_password = config.get('db_password') or config.get('root_password', '')  # noqa: F841
     except Exception as e:
         print(f"Warning: Could not read MariaDB password from config: {str(e)}")
         db_password = ''  # noqa: F841
-    
+
     # Check which dependencies are missing
     missing_deps = []
-    
+
     for dep_name, dep_info in dependencies.items():
         try:
             result = subprocess.run(dep_info['check'], shell=True, capture_output=True)  # nosec B602 — commands from trusted dependencies.json
@@ -174,21 +180,21 @@ def check_and_install_system_dependencies():  # noqa: C901
                 print(f"✓ {dep_name} is installed")
         except Exception:
             missing_deps.append(dep_name)
-    
+
     if not missing_deps:
         print("✓ All system dependencies are installed")
         return
-    
+
     # Auto-install missing dependencies
     print(f"\nMissing dependencies: {', '.join(missing_deps)}")
     print("Installing missing dependencies automatically...\n")
-    
+
     # Update package list first
     try:
         subprocess.run(['sudo', 'apt-get', 'update'], check=True)
     except Exception as e:
         print(f"Warning: apt-get update failed: {str(e)}")
-    
+
     # Install each missing dependency
     for dep_name in missing_deps:
         if dep_name in dependencies:
@@ -197,7 +203,7 @@ def check_and_install_system_dependencies():  # noqa: C901
             try:
                 # Intelligent sudo injection for chained commands and pipes
                 cmd = dep_info['install']
-                
+
                 # Handle && chains - add sudo to each part
                 parts = cmd.split('&&')
                 sudo_parts = []
@@ -208,23 +214,23 @@ def check_and_install_system_dependencies():  # noqa: C901
                         pipe_parts = part.split('|')
                             # Add sudo after pipe if not present
                         part = '|'.join([p if i==0 else f" sudo {p.strip()}" for i, p in enumerate(pipe_parts)])
-                    
+
                     # Add sudo if not present (handling env as well)
                     if not part.startswith('sudo'):
                         sudo_parts.append(f"sudo {part}")
                     else:
                         sudo_parts.append(part)
-                
+
                 install_cmd = ' && '.join(sudo_parts)
-                
+
                 print(f"Executing: {install_cmd}")
                 subprocess.run(install_cmd, shell=True, check=True)  # nosec B602 — commands from trusted dependencies.json, require shell for pipes/chains
-                
+
                 # Special handling for packages that might start apache2
                 if dep_name in ['roundcube', 'phpmyadmin']:
                     subprocess.run(['sudo', 'systemctl', 'stop', 'apache2'], check=False)
                     subprocess.run(['sudo', 'systemctl', 'disable', 'apache2'], check=False)
-                    
+
                 print(f"✓ {dep_name} installed successfully\n")
             except Exception as e:
                 print(f"✗ Failed to install {dep_name}: {str(e)}")
@@ -240,13 +246,13 @@ def setup_security_features():
         print("✓ Nginx rate limiting configured")
     except Exception as e:
         print(f"Warning: Failed to setup Nginx rate limiting: {str(e)}")
-    
+
     try:
         # Setup ModSecurity if installed
         # Check for compiled module OR Ubuntu package
         result = subprocess.run('nginx -V 2>&1 | grep -q modsecurity', shell=True)  # nosec B602 — pipe required for version check
         pkg_result = subprocess.run('dpkg -l | grep -q libnginx-mod-http-modsecurity', shell=True)  # nosec B602 — pipe required
-        
+
         if result.returncode == 0 or pkg_result.returncode == 0:
             from rpanel.hosting.modsecurity_manager import setup_modsecurity
             setup_modsecurity()
@@ -255,9 +261,9 @@ def setup_security_features():
             print("ℹ ModSecurity not installed, skipping WAF setup")
     except Exception as e:
         print(f"Warning: Failed to setup ModSecurity: {str(e)}")
-    
+
     print("\n✓ System dependency installation complete")
-    
+
     # Final check: Ensure Apache is dead and Nginx is alive
     # This is critical because some packages (phpmyadmin/roundcube) might restart apache at the end of their install scripts
     print("\n=== Verifying Web Server Status ===")
@@ -267,11 +273,11 @@ def setup_security_features():
         subprocess.run(["sudo", "sed", "-i", "s/Listen 80/Listen 8080/g", "/etc/apache2/ports.conf"], check=False)
         # Change <VirtualHost *:80> to <VirtualHost *:8080> in default site
         subprocess.run(["sudo", "sed", "-i", r"s/<VirtualHost \*:80>/<VirtualHost \*:8080>/g", "/etc/apache2/sites-available/000-default.conf"], check=False)
-        
+
         print("Stopping Apache2 service...")
         subprocess.run(['sudo', 'systemctl', 'stop', 'apache2'], check=False)
         subprocess.run(['sudo', 'systemctl', 'disable', 'apache2'], check=False)
-        
+
         print("Restarting Nginx service...")
         subprocess.run(['sudo', 'systemctl', 'restart', 'nginx'], check=True)
         print("✓ Nginx restarted successfully (Port 80 reclaimed)")

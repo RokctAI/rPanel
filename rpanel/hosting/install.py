@@ -5,6 +5,7 @@ import frappe
 import subprocess
 import sys
 
+
 def check_and_install_dependencies():
     """Check and install hosting module dependencies"""
     required_packages = [
@@ -19,22 +20,22 @@ def check_and_install_dependencies():
         'google-auth-httplib2',
         'google-api-python-client'
     ]
-    
+
     missing_packages = []
-    
+
     # Check which packages are missing
     for package in required_packages:
         try:
             __import__(package.replace('-', '_'))
         except ImportError:
             missing_packages.append(package)
-    
+
     # Install missing packages
     if missing_packages:
         print(f"\n{'='*60}")
         print("ROKCT Hosting Module: Installing dependencies...")
         print(f"{'='*60}\n")
-        
+
         for package in missing_packages:
             try:
                 print(f"Installing {package}...")
@@ -44,7 +45,7 @@ def check_and_install_dependencies():
                 print(f"✓ {package} installed successfully")
             except subprocess.CalledProcessError as e:
                 print(f"✗ Failed to install {package}: {str(e)}")
-        
+
         print(f"\n{'='*60}")
         print("Dependency installation complete!")
         print(f"{'='*60}\n")
@@ -55,7 +56,7 @@ def check_and_install_dependencies():
 def after_install():
     """Run after hosting module installation"""
     check_and_install_dependencies()
-    
+
     # Create default alert templates
     try:
         frappe.get_attr('rpanel.hosting.doctype.alert_template.alert_template.create_default_templates')()

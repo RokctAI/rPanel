@@ -2,13 +2,14 @@ import subprocess
 import os
 import re
 
+
 class ServiceIntelligence:
     """
     Dynamic detection of service versions and paths.
     Ensures RPanel works across different Ubuntu/Debian distributions
     without hardcoded version strings.
     """
-    
+
     @staticmethod
     def get_postgresql_major_version():
         """Detect installed PostgreSQL major version"""
@@ -21,7 +22,7 @@ class ServiceIntelligence:
                 return match.group(1)
         except Exception:
             pass
-            
+
         # Fallback: check /etc/postgresql directory
         try:
             if os.path.exists('/etc/postgresql'):
@@ -30,8 +31,8 @@ class ServiceIntelligence:
                     return sorted(versions, reverse=True)[0]
         except Exception:
             pass
-            
-        return "15" # Sensible default for modern systems
+
+        return "15"  # Sensible default for modern systems
 
     @staticmethod
     def get_installed_php_versions():
@@ -40,7 +41,7 @@ class ServiceIntelligence:
         try:
             if os.path.exists('/etc/php'):
                 # Look for directories like 8.1, 8.2, 8.3 in /etc/php
-                versions = [d for d in os.listdir('/etc/php') 
+                versions = [d for d in os.listdir('/etc/php')
                            if re.match(r'^[0-9]\.[0-9]$', d) and os.path.isdir(os.path.join('/etc/php', d))]
         except Exception:
             pass
@@ -52,7 +53,7 @@ class ServiceIntelligence:
         versions = ServiceIntelligence.get_installed_php_versions()
         if versions:
             return versions[0]
-        return "8.2" # Project fallback
+        return "8.2"  # Project fallback
 
     @staticmethod
     def get_php_fpm_socket(version=None, user=None):

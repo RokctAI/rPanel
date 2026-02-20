@@ -5,11 +5,12 @@ import frappe
 from frappe import _
 from datetime import datetime, timedelta
 
+
 def execute(filters=None):
     columns = get_columns()
     data = get_data(filters)
     chart = get_chart_data(data, filters)
-    
+
     return columns, data, None, chart
 
 
@@ -80,18 +81,18 @@ def get_columns():
 
 def get_data(filters):
     conditions = []
-    
+
     if filters.get('website'):
         conditions.append(f"website = '{filters.get('website')}'")
-    
+
     if filters.get('from_date'):
         conditions.append(f"timestamp >= '{filters.get('from_date')}'")
-    
+
     if filters.get('to_date'):
         conditions.append(f"timestamp <= '{filters.get('to_date')}'")
-    
+
     where_clause = ' AND '.join(conditions) if conditions else '1=1'
-    
+
     data = frappe.db.sql(f"""
         SELECT
             website,
@@ -108,17 +109,17 @@ def get_data(filters):
         ORDER BY timestamp DESC
         LIMIT 1000
     """, as_dict=1)
-    
+
     return data
 
 
 def get_chart_data(data, filters):
     if not data:
         return None
-    
+
     # Group by hour for better visualization
     hourly_data = {}
-    
+
     for row in data:
         hour = row.timestamp.strftime('%Y-%m-%d %H:00')
         if hour not in hourly_data:
@@ -129,18 +130,18 @@ def get_chart_data(data, filters):
                 'requests': 0,
                 'errors': 0
             }
-        
+
         hourly_data[hour]['cpu'].append(row.cpu_usage or 0)
         hourly_data[hour]['memory'].append(row.memory_usage or 0)
         hourly_data[hour]['disk'].append(row.disk_usage or 0)
         hourly_data[hour]['requests'] += row.request_count or 0
         hourly_data[hour]['errors'] += row.error_count or 0
-    
+
     # Calculate averages
     labels = sorted(hourly_data.keys())
     cpu_values = [sum(hourly_data[h]['cpu']) / len(hourly_data[h]['cpu']) if hourly_data[h]['cpu'] else 0 for h in labels]
     memory_values = [sum(hourly_data[h]['memory']) / len(hourly_data[h]['memory']) if hourly_data[h]['memory'] else 0 for h in labels]
-    
+
     chart = {
         'data': {
             'labels': labels[-24:],  # Last 24 hours
@@ -161,5 +162,5 @@ def get_chart_data(data, filters):
             'xIsSeries': 1
         }
     }
-    
+
     return chart

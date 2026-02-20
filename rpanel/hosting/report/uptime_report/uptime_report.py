@@ -5,12 +5,13 @@ import frappe
 from frappe import _
 from datetime import datetime, timedelta
 
+
 def execute(filters=None):
     columns = get_columns()
     data = get_data(filters)
     summary = get_summary(data, filters)
     chart = get_chart_data(data, filters)
-    
+
     return columns, data, None, chart, summary
 
 
@@ -59,18 +60,18 @@ def get_columns():
 
 def get_data(filters):
     conditions = []
-    
+
     if filters.get('website'):
         conditions.append(f"website = '{filters.get('website')}'")
-    
+
     if filters.get('from_date'):
         conditions.append(f"check_time >= '{filters.get('from_date')}'")
-    
+
     if filters.get('to_date'):
         conditions.append(f"check_time <= '{filters.get('to_date')}'")
-    
+
     where_clause = ' AND '.join(conditions) if conditions else '1=1'
-    
+
     data = frappe.db.sql(f"""
         SELECT
             website,
@@ -84,27 +85,27 @@ def get_data(filters):
         ORDER BY check_time DESC
         LIMIT 1000
     """, as_dict=1)
-    
+
     # Format status
     for row in data:
         row['is_up'] = 'Up' if row.is_up else 'Down'
-    
+
     return data
 
 
 def get_summary(data, filters):
     if not data:
         return []
-    
+
     total_checks = len(data)
     up_checks = sum(1 for d in data if d['is_up'] == 'Up')
     down_checks = total_checks - up_checks
     uptime_percentage = (up_checks / total_checks * 100) if total_checks > 0 else 0
-    
+
     # Calculate average response time for successful checks
     response_times = [d.response_time for d in data if d['is_up'] == 'Up' and d.response_time]
     avg_response_time = sum(response_times) / len(response_times) if response_times else 0
-    
+
     return [
         {
             'value': f"{uptime_percentage:.2f}%",
@@ -136,27 +137,27 @@ def get_summary(data, filters):
 def get_chart_data(data, filters):
     if not data:
         return None
-    
+
     # Group by hour
     hourly_data = {}
-    
+
     for row in data:
         hour = row.check_time.strftime('%Y-%m-%d %H:00')
         if hour not in hourly_data:
             hourly_data[hour] = {'up': 0, 'down': 0, 'response_times': []}
-        
+
         if row['is_up'] == 'Up':
             hourly_data[hour]['up'] += 1
             if row.response_time:
                 hourly_data[hour]['response_times'].append(row.response_time)
         else:
             hourly_data[hour]['down'] += 1
-    
+
     labels = sorted(hourly_data.keys())
-    uptime_values = [(hourly_data[h]['up'] / (hourly_data[h]['up'] + hourly_data[h]['down']) * 100) 
-                     if (hourly_data[h]['up'] + hourly_data[h]['down']) > 0 else 0 
+    uptime_values = [(hourly_data[h]['up'] / (hourly_data[h]['up'] + hourly_data[h]['down']) * 100)
+                     if (hourly_data[h]['up'] + hourly_data[h]['down']) > 0 else 0
                      for h in labels]
-    
+
     chart = {
         'data': {
             'labels': labels[-24:],  # Last 24 hours
@@ -176,5 +177,5 @@ def get_chart_data(data, filters):
             'regionFill': 1
         }
     }
-    
+
     return chart

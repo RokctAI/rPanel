@@ -6,11 +6,12 @@ import subprocess
 import os
 import glob
 
+
 @frappe.whitelist()
 def setup_phpmyadmin(website_name):
     """Setup phpMyAdmin for a website"""
     website = frappe.get_doc('Hosted Website', website_name)
-    
+
     try:
         # Download phpMyAdmin if not exists
         phpmyadmin_path = "/usr/share/phpmyadmin"
@@ -30,12 +31,12 @@ def setup_phpmyadmin(website_name):
             matches = glob.glob("/tmp/phpMyAdmin-*-all-languages")
             if matches:
                 os.rename(matches[0], phpmyadmin_path)
-        
+
         # Create symlink in website directory
         pma_link = os.path.join(website.site_path, 'phpmyadmin')
         if not os.path.exists(pma_link):
             os.symlink(phpmyadmin_path, pma_link)
-        
+
         # Create config file
         config_file = os.path.join(pma_link, 'config.inc.php')
         config = f"""<?php
@@ -52,18 +53,18 @@ $cfg['SaveDir'] = '';
 """
         with open(config_file, 'w') as f:
             f.write(config)
-        
+
         # Set permissions
         subprocess.run(["chown", "-R", "www-data:www-data", pma_link], check=True)
-        
+
         pma_url = f"https://{website.domain}/phpmyadmin"
-        
+
         return {
             'success': True,
             'url': pma_url,
             'message': 'phpMyAdmin installed'
         }
-        
+
     except Exception as e:
         frappe.log_error(f"phpMyAdmin setup failed: {str(e)}")
         return {'success': False, 'error': str(e)}
@@ -74,7 +75,7 @@ def get_phpmyadmin_url(website_name):
     """Get phpMyAdmin URL for website"""
     website = frappe.get_doc('Hosted Website', website_name)
     pma_link = os.path.join(website.site_path, 'phpmyadmin')
-    
+
     if os.path.exists(pma_link):
         return {
             'success': True,

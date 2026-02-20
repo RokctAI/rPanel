@@ -12,10 +12,11 @@ How to use:
 
 import frappe
 
+
 def sync_client_quotas(client_name, plan_doc):
     """
     Syncs Hosting Client quotas (Validates RPanel fields).
-    
+
     Args:
         client_name (str): Name of the Hosting Client (usually Customer name).
         plan_doc (doc): Your Subscription Plan document.

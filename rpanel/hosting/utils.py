@@ -6,6 +6,7 @@ import string
 
 # Removed 'import crypt' (incompatible with Python 3.13+)
 
+
 def run_certbot(domain, webroot):
     """Issues a certificate for the domain using webroot challenge"""
     try:
@@ -21,13 +22,14 @@ def run_certbot(domain, webroot):
             "-d", f"www.{domain}",
             "--non-interactive",
             "--agree-tos",
-            "--email", f"admin@{domain}" 
+            "--email", f"admin@{domain}"
         ]
 
         subprocess.run(cmd, check=True, capture_output=True, text=True)
         return True, "Certificate issued successfully."
     except subprocess.CalledProcessError as e:
         return False, f"Certbot failed: {e.stderr}"
+
 
 def update_exim_config(domain, accounts):  # noqa: C901
     """
@@ -62,11 +64,11 @@ def update_exim_config(domain, accounts):  # noqa: C901
         # Add new entries
         for acc in accounts:
             full_user = f"{acc['user']}@{domain}"
-            
+
             # --- SECURE HASH REPLACEMENT FOR CRYPT ---
             # Generate random 16-char salt
             salt = ''.join(secrets.choice(string.ascii_letters + string.digits) for _ in range(16))
-            
+
             # Use openssl to generate SHA-512 crypt hash ($6$)
             # We pass password via stdin to prevent exposure in 'ps aux'
             try:
@@ -90,7 +92,7 @@ def update_exim_config(domain, accounts):  # noqa: C901
             f.writelines(new_lines)
 
         subprocess.run(["sudo", "mv", temp_passwd, passwd_file], check=True)
-        subprocess.run(["sudo", "chown", "root:exim", passwd_file], check=False) 
+        subprocess.run(["sudo", "chown", "root:exim", passwd_file], check=False)
         subprocess.run(["sudo", "chmod", "640", passwd_file], check=False)
 
         # 2. Update Virtual Map (Aliases/Forwarding)
@@ -122,7 +124,7 @@ def update_exim_config(domain, accounts):  # noqa: C901
         subprocess.run(["sudo", "mv", temp_virtual, domain_file], check=True)
 
         # 3. Reload
-        subprocess.run(["sudo", "update-exim4.conf"], check=False) 
+        subprocess.run(["sudo", "update-exim4.conf"], check=False)
         subprocess.run(["sudo", "systemctl", "reload", "exim4"], check=True)
 
         return True, "Email configuration updated."

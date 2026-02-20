@@ -8,15 +8,16 @@ from datetime import datetime
 import subprocess
 import shlex
 
+
 class CronJob(Document):
     def validate(self):
         """Validate cron expression and calculate next run"""
         if not self.validate_cron_expression(self.schedule):
             frappe.throw(f"Invalid cron expression: {self.schedule}")
-        
+
         # Calculate next run time
         self.next_run = self.get_next_run_time()
-    
+
     def validate_cron_expression(self, expression):
         """Validate if cron expression is valid"""
         try:
@@ -24,7 +25,7 @@ class CronJob(Document):
             return True
         except (ValueError, KeyError, TypeError):
             return False
-    
+
     def get_next_run_time(self):
         """Calculate next run time based on cron expression"""
         try:
@@ -33,24 +34,24 @@ class CronJob(Document):
         except Exception as e:
             frappe.log_error(f"Error calculating next run: {str(e)}")
             return None
-    
+
     def execute(self):
         """Execute the cron job"""
         if not self.enabled:
             frappe.throw("Cannot execute disabled cron job")
-        
+
         # Update status
         self.db_set('last_status', 'Running')
         self.db_set('last_run', datetime.now())
         frappe.db.commit()
-        
+
         try:
             # Get website details
             website = frappe.get_doc('Hosted Website', self.website)
-            
+
             # Prepare command
             cmd = self.command
-            
+
             # Execute in website directory
             result = subprocess.run(
                 shlex.split(cmd),
@@ -59,7 +60,7 @@ class CronJob(Document):
                 text=True,
                 timeout=300  # 5 minute timeout
             )
-            
+
             # Update status
             if result.returncode == 0:
                 self.db_set('last_status', 'Success')
@@ -67,42 +68,42 @@ class CronJob(Document):
             else:
                 self.db_set('last_status', 'Failed')
                 self.db_set('last_output', result.stderr)
-                
+
                 # Send email notification if enabled
                 if self.email_on_failure and self.notification_email:
                     self.send_failure_notification(result.stderr)
-            
+
             # Calculate next run
             self.db_set('next_run', self.get_next_run_time())
             frappe.db.commit()
-            
+
             return {
                 'success': result.returncode == 0,
                 'output': result.stdout if result.returncode == 0 else result.stderr
             }
-            
+
         except subprocess.TimeoutExpired:
             self.db_set('last_status', 'Failed')
             self.db_set('last_output', 'Command timed out after 5 minutes')
             frappe.db.commit()
-            
+
             if self.email_on_failure and self.notification_email:
                 self.send_failure_notification('Command timed out')
-            
+
             return {'success': False, 'output': 'Timeout'}
-            
+
         except Exception as e:
             error_msg = str(e)
             self.db_set('last_status', 'Failed')
             self.db_set('last_output', error_msg)
             frappe.db.commit()
-            
+
             if self.email_on_failure and self.notification_email:
                 self.send_failure_notification(error_msg)
-            
+
             frappe.log_error(f"Cron job execution failed: {error_msg}")
             return {'success': False, 'output': error_msg}
-    
+
     def send_failure_notification(self, error_message):
         """Send email notification on job failure"""
         try:
@@ -174,7 +175,7 @@ def validate_cron_expression(expression):
         next_runs = []
         for i in range(5):
             next_runs.append(cron.get_next(datetime).strftime('%Y-%m-%d %H:%M:%S'))
-        
+
         return {
             'valid': True,
             'next_runs': next_runs
@@ -189,7 +190,7 @@ def validate_cron_expression(expression):
 def execute_scheduled_cron_jobs():
     """Execute all enabled cron jobs that are due (called by scheduler)"""
     now = datetime.now()
-    
+
     # Get all enabled cron jobs where next_run <= now
     jobs = frappe.get_all(
         'Cron Job',
@@ -199,13 +200,14 @@ def execute_scheduled_cron_jobs():
         },
         fields=['name']
     )
-    
+
     for job in jobs:
         try:
             job_doc = frappe.get_doc('Cron Job', job.name)
             job_doc.execute()
         except Exception as e:
             frappe.log_error(f"Scheduled cron job execution failed: {str(e)}", f"Cron Job: {job.name}")
+
 
 @frappe.whitelist()
 def get_cron_jobs(website=None):
@@ -226,6 +228,7 @@ def get_cron_jobs(website=None):
 
     return jobs
 
+
 @frappe.whitelist()
 def create_cron_job(website, command, schedule, description=None):
     """Create a new cron job"""
@@ -240,6 +243,7 @@ def create_cron_job(website, command, schedule, description=None):
     job.insert()
     return {'success': True, 'name': job.name}
 
+
 @frappe.whitelist()
 def update_cron_job(name, website, command, schedule, description=None):
     """Update an existing cron job"""
@@ -251,6 +255,7 @@ def update_cron_job(name, website, command, schedule, description=None):
         job.description = description
     job.save()
     return {'success': True}
+
 
 @frappe.whitelist()
 def delete_cron_job(name):
