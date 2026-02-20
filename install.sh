@@ -3,7 +3,7 @@
 # RPanel Flexible Installer
 # Usage: DEPLOY_MODE=[fresh|bench|dependency] ./install.sh
 # Default mode is "fresh" (full VPS install).
-INSTALLER_VERSION="v8.1-VENV-REDIRECT"
+INSTALLER_VERSION="v8.2-LOGIN-SHELL-FIX"
 
 echo -e "\033[0;34mRPanel Installer Version: $INSTALLER_VERSION\033[0;0m"
 
@@ -438,12 +438,13 @@ echo -e "${GREEN}Configuring production services...${NC}"
 run_quiet "Installing Supervisor" apt-get install -y -qq -o=Dpkg::Use-Pty=0 supervisor
 run_quiet "Starting Supervisor" systemctl restart supervisor
 
-# 2. THE CI MASTER FIX: Use the Bench Virtualenv Python directly
-# This guarantees that the 'bench' module is found because we use the internal env.
-# We run as sudo to ensure /etc/ permissions.
-BENCH_VENV_PYTHON="/home/frappe/frappe-bench/env/bin/python"
-
-run_quiet "Generating production config" sudo "$BENCH_VENV_PYTHON" -m bench setup production frappe --yes --user frappe
+# 2. THE CI RECOVERY FIX: Execute as a full login shell for the frappe user
+# We use 'sudo -i -u frappe' to ensure the user's local bin is in the PATH.
+# We call 'sudo' internally to handle /etc/ permissions.
+run_quiet "Generating production config" sudo -i -u frappe bash <<EOF
+cd /home/frappe/frappe-bench
+sudo /home/frappe/.local/bin/bench setup production frappe --yes --user frappe
+EOF
 
 # 3. Manual override if Bench fails to link (the "Nuclear Option")
 if [ ! -f /etc/nginx/conf.d/frappe.conf ] && [ -f /home/frappe/frappe-bench/config/nginx.conf ]; then
