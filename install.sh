@@ -307,14 +307,14 @@ configure_postgresql() {
 
 # Helper to create frappe system user (only for fresh mode)
 create_frappe_user() {
-  echo -e "${GREEN}Creating frappe system user...${NC}"
+  echo -e "${GREEN}Creating/Configuring frappe system user...${NC}"
   if ! id -u frappe > /dev/null 2>&1; then
     useradd -m -s /bin/bash frappe
     usermod -aG sudo frappe
-    # Nuclear sudo permission for frappe user (Required for bench setup production)
-    echo "frappe ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/frappe
-    chmod 440 /etc/sudoers.d/frappe
   fi
+  # Nuclear sudo permission for frappe user (Always ensured for bench setup production)
+  echo "frappe ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/frappe
+  chmod 440 /etc/sudoers.d/frappe
 }
 
 # Helper to install Bench (fresh or bench mode)
