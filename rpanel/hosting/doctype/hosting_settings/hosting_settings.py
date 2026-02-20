@@ -149,7 +149,7 @@ def get_system_status():
             status[service] = {
                 'status': result.stdout.strip() if result.returncode == 0 else 'inactive'
             }
-        except Exception as e:
+        except Exception:
             status[service] = {'status': 'unknown'}
     
     return status
