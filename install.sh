@@ -304,7 +304,11 @@ EOF
 
 # Helper to fetch latest RPanel release tag
 fetch_latest_tag() {
-  python3 /home/frappe/frappe-bench/apps/rpanel/scripts/get_latest_release.py 2>/dev/null || echo ""
+  if [ -f "/home/frappe/frappe-bench/apps/rpanel/scripts/get_latest_release.py" ]; then
+    python3.14 /home/frappe/frappe-bench/apps/rpanel/scripts/get_latest_release.py 2>/dev/null || echo ""
+  else
+    echo ""
+  fi
 }
 
 # Main logic per mode
@@ -326,44 +330,35 @@ case "$MODE" in
 esac
 
 # Install/Update RPanel app
-LATEST_TAG=$(fetch_latest_tag)
+LATEST_TAG=$(fetch_latest_tag || echo "")
 if [ -z "$LATEST_TAG" ]; then
   TAG_OPTION=""
 else
   TAG_OPTION="--branch $LATEST_TAG"
 fi
 
-sudo -u frappe -i -H env HOME=/home/frappe XDG_CONFIG_HOME=/home/frappe/.config XDG_DATA_HOME=/home/frappe/.local/share PATH="/usr/bin:/usr/local/bin:/home/frappe/.local/bin:$PATH" bash <<EOF >> "$INSTALL_LOG" 2>&1
-export PATH=\$PATH:/home/frappe/.local/bin
-cd /home/frappe/frappe-bench
+# Define common sudo prefix for bench commands
+BENCH_SUDO="sudo -u frappe -i -H env HOME=/home/frappe XDG_CONFIG_HOME=/home/frappe/.config XDG_DATA_HOME=/home/frappe/.local/share PATH=/usr/bin:/usr/local/bin:/home/frappe/.local/bin:$PATH"
 
-if [ ! -d "apps/rpanel" ]; then
-  bench get-app https://github.com/RokctAI/rpanel.git $TAG_OPTION --skip-assets
+if [ ! -d "/home/frappe/frappe-bench/apps/rpanel" ]; then
+  run_quiet "Downloading RPanel app" $BENCH_SUDO bash -c "cd /home/frappe/frappe-bench && bench get-app https://github.com/RokctAI/rpanel.git $TAG_OPTION --skip-assets"
 else
-  cd apps/rpanel && git fetch --tags && [ -n "$TAG_OPTION" ] && git checkout $LATEST_TAG
-  cd ../..
+  run_quiet "Updating RPanel app" $BENCH_SUDO bash -c "cd /home/frappe/frappe-bench/apps/rpanel && git fetch --tags && [ -n \"$TAG_OPTION\" ] && git checkout $LATEST_TAG"
 fi
 
-# Critical Fix for esbuild path error: ensure build config is generated
-bench setup build_config
+run_quiet "Generating build configuration" $BENCH_SUDO bash -c "cd /home/frappe/frappe-bench && bench setup build_config"
 
-# Ensure site exists BEFORE building assets for custom apps
 SITE_NAME="${DOMAIN_NAME:-rpanel.local}"
-if [ ! -d "sites/\$SITE_NAME" ]; then
-  # We use --admin-password admin for non-interactive
-  # We don't install app here to avoid early build failure
-  bench new-site \$SITE_NAME --admin-password admin --db-root-password $DB_ROOT_PASS $( [[ "$DB_TYPE" == "postgres" ]] && echo "--db-type postgres" ) || true
+if [ ! -d "/home/frappe/frappe-bench/sites/$SITE_NAME" ]; then
+  run_quiet "Creating site: $SITE_NAME" $BENCH_SUDO bash -c "cd /home/frappe/frappe-bench && bench new-site $SITE_NAME --admin-password admin --db-root-password $DB_ROOT_PASS $( [[ \"$DB_TYPE\" == \"postgres\" ]] && echo \"--db-type postgres\" ) || true"
 fi
 
-# Now install app and build assets in the correct order
-bench --site \$SITE_NAME install-app rpanel
-bench build --app rpanel
-EOF
-echo -e "${GREEN}✓ RPanel app and site configured${NC}"
+run_quiet "Installing RPanel into site" $BENCH_SUDO bash -c "cd /home/frappe/frappe-bench && bench --site $SITE_NAME install-app rpanel"
+run_quiet "Building application assets" $BENCH_SUDO bash -c "cd /home/frappe/frappe-bench && bench build --app rpanel"
 
 # Production setup
 echo -e "${GREEN}Configuring production services...${NC}"
-run_quiet "Generating production config" sudo -u frappe -H bash -c "export PATH=\$PATH:/home/frappe/.local/bin; cd /home/frappe/frappe-bench; bench setup production frappe"
+run_quiet "Generating production config" $BENCH_SUDO bash -c "cd /home/frappe/frappe-bench && bench setup production frappe"
 
 # Provision localhost if self-hosted mode
 if [[ "$MODE" == "fresh" && ("$SELF_HOSTED" == "Y" || "$SELF_HOSTED" == "y") ]]; then
