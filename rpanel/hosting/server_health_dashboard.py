@@ -38,7 +38,7 @@ def get_server_health_dashboard():
                 server['cpu_usage'] = resources.get('cpu_usage', 'N/A')
                 server['memory_usage'] = resources.get('memory_usage', 'N/A')
                 server['disk_usage'] = resources.get('disk_usage', 'N/A')
-        except:
+        except Exception:
             server['cpu_usage'] = 'N/A'
             server['memory_usage'] = 'N/A'
             server['disk_usage'] = 'N/A'
