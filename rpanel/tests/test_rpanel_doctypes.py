@@ -100,7 +100,7 @@ class TestHostedWebsite(unittest.TestCase):
             
         self.doc.domain = "valid-domain.com"
         # Since we are testing validate(), we might need to mock check_client_quota too if it hits DB
-        with patch.object(self.doc, 'check_client_quota') as mock_quota:
+        with patch.object(self.doc, 'check_client_quota') as mock_quota:  # noqa: F841
             self.doc.validate()
             # Should pass without error
 
