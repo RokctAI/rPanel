@@ -298,6 +298,11 @@ if [ ! -d "frappe-bench" ]; then
   # Initialize bench with Python 3.14
   # Using --verbose inside the log for easier debugging
   bench init frappe-bench --frappe-branch version-16 --python python3.14 --skip-assets --skip-redis-config-generation --verbose
+  
+  # Crucial for Postgres: Install the driver inside the bench virtualenv
+  if [[ "$DB_TYPE" == "postgres" ]]; then
+    ./frappe-bench/env/bin/pip install psycopg2-binary >> "$INSTALL_LOG" 2>&1
+  fi
 fi
 EOF
 }
