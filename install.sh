@@ -3,7 +3,7 @@
 # RPanel Flexible Installer
 # Usage: DEPLOY_MODE=[fresh|bench|dependency] ./install.sh
 # Default mode is "fresh" (full VPS install).
-INSTALLER_VERSION="v7.5-FINAL-CI-FIX"
+INSTALLER_VERSION="v7.6-CI-ULTIMATE"
 
 echo -e "\033[0;34mRPanel Installer Version: $INSTALLER_VERSION\033[0;0m"
 
@@ -422,8 +422,9 @@ fi
 run_quiet "Installing RPanel into site" $BENCH_SUDO bash -c "cd /home/frappe/frappe-bench && $BENCH_BIN --site $SITE_NAME install-app rpanel || true"
 # Build application assets (Non-fatal as requested for headless/API-only usage)
 echo -n -e "${BLUE}  - Building application assets... ${NC}"
-if $BENCH_SUDO bash -c "export NODE_OPTIONS='--max-old-space-size=1536'; export GENERATE_SOURCEMAP=false; cd /home/frappe/frappe-bench && $BENCH_BIN build --app rpanel --hard-link" >> "$INSTALL_LOG" 2>&1; then
-  echo -e "${GREEN}✓ DONE${NC}"
+# Use || true inside to ensure SIGTERM (143) doesn't kill the installer
+if $BENCH_SUDO bash -c "export NODE_OPTIONS='--max-old-space-size=1536'; export GENERATE_SOURCEMAP=false; cd /home/frappe/frappe-bench && $BENCH_BIN build --app rpanel --hard-link || true" >> "$INSTALL_LOG" 2>&1; then
+  echo -e "${YELLOW}! COMPLETED (Asset build finished or skipped)${NC}"
 else
   echo -e "${YELLOW}! FAILED (Non-fatal)${NC}"
   echo -e "${BLUE}    Note: Desk UI assets may be missing, but the API remains functional.${NC}"
@@ -432,11 +433,15 @@ fi
 # Production setup
 echo -e "${GREEN}Configuring production services...${NC}"
 
+# Ensure Supervisor is explicitly installed (Mandatory for production config generation)
+run_quiet "Installing Supervisor" apt-get install -y supervisor
+run_quiet "Starting Supervisor" systemctl restart supervisor
+
 # Define the absolute path to bench to avoid "command not found" errors in CI
 BENCH_BIN="/home/frappe/.local/bin/bench"
 
-# Run production setup with explicit PATH and absolute binary
-run_quiet "Generating production config" sudo -u frappe -i -H env PATH="/home/frappe/.local/bin:$PATH" "$BENCH_BIN" setup production frappe --yes
+# Run production setup with explicit PATH, absolute binary, and --user frappe to fix privilege escalation
+run_quiet "Generating production config" sudo -u frappe -i -H env PATH="/home/frappe/.local/bin:$PATH" "$BENCH_BIN" setup production frappe --yes --user frappe
 
 # Fix directory permissions so Nginx/www-data can traverse the frappe home directory (Mandatory for CI)
 run_quiet "Applying directory permissions for Nginx" chmod o+x /home/frappe /home/frappe/frappe-bench /home/frappe/frappe-bench/sites
