@@ -204,6 +204,8 @@ setup_swap() {
         echo "/swapfile swap swap defaults 0 0" >> /etc/fstab
       fi
       echo -e "${GREEN}✓ Swap enabled${NC}"
+    else
+      echo -e "${BLUE}Memory check: ${total_mem}MB. Skipping swap creation.${NC}"
     fi
   fi
 }
@@ -367,9 +369,9 @@ else
 fi
 
 # Define common sudo prefix for bench commands
-# Ultra-conservative limits: 2.5GB Node memory, Single-core, Single-worker
+# Ultra-conservative limits: 2.5GB Node memory, Single-core, Single-worker, No Sourcemaps
 # This is required to prevent SIGTERM (143) OOM kills in CI/small VPS environments.
-BENCH_SUDO="sudo -u frappe -i -H env CI=${CI:-false} NODE_OPTIONS='--max-old-space-size=2560' ESBUILD_WORKERS=1 MAX_WORKERS=1 CPU_COUNT=1 HOME=/home/frappe XDG_CONFIG_HOME=/home/frappe/.config XDG_DATA_HOME=/home/frappe/.local/share PATH=/usr/bin:/usr/local/bin:/home/frappe/.local/bin:$PATH"
+BENCH_SUDO="sudo -u frappe -i -H env CI=${CI:-false} NODE_OPTIONS='--max-old-space-size=2560' ESBUILD_WORKERS=1 MAX_WORKERS=1 CPU_COUNT=1 GENERATE_SOURCEMAP=false NODE_ENV=production HOME=/home/frappe XDG_CONFIG_HOME=/home/frappe/.config XDG_DATA_HOME=/home/frappe/.local/share PATH=/usr/bin:/usr/local/bin:/home/frappe/.local/bin:$PATH"
 
 if [ ! -d "/home/frappe/frappe-bench/apps/rpanel" ]; then
   run_quiet "Downloading RPanel app" $BENCH_SUDO bash -c "cd /home/frappe/frappe-bench && bench get-app https://github.com/RokctAI/rpanel.git $TAG_OPTION --skip-assets"
@@ -389,7 +391,8 @@ run_quiet "Registering RPanel app" $BENCH_SUDO bash -c "cd /home/frappe/frappe-b
 
 run_quiet "Installing RPanel into site" $BENCH_SUDO bash -c "cd /home/frappe/frappe-bench && bench --site $SITE_NAME install-app rpanel"
 # Use --hard-link to save disk space/IO and --production for optimized build
-run_quiet "Building application assets" $BENCH_SUDO bash -c "cd /home/frappe/frappe-bench && bench build --app rpanel --production --hard-link"
+# Adding export NODE_OPTIONS again inside bash -c for redundancy
+run_quiet "Building application assets" $BENCH_SUDO bash -c "export NODE_OPTIONS='--max-old-space-size=2560'; export GENERATE_SOURCEMAP=false; cd /home/frappe/frappe-bench && bench build --app rpanel --production --hard-link"
 
 # Production setup
 echo -e "${GREEN}Configuring production services...${NC}"
