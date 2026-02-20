@@ -186,7 +186,7 @@ class SiteBackup(Document):
         
         return f"dropbox:/backups/{os.path.basename(backup_file)}"
     
-    def restore_backup(self):
+    def restore_backup(self):  # noqa: C901
         """Restore backup to website"""
         try:
             if not self.file_path or not os.path.exists(self.file_path):
@@ -231,7 +231,7 @@ class SiteBackup(Document):
         subprocess.run(shlex.split(cmd), check=True)
         
         # Restore database
-        db_file = os.path.join(website.site_path, f"*_db.sql")
+        db_file = os.path.join(website.site_path, "*_db.sql")
         # Secure: Password hidden from process list
         run_mysql_restore(
             database=website.db_name,
