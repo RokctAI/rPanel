@@ -3,7 +3,7 @@
 # RPanel Flexible Installer
 # Usage: DEPLOY_MODE=[fresh|bench|dependency] ./install.sh
 # Default mode is "fresh" (full VPS install).
-INSTALLER_VERSION="v7.6-CI-ULTIMATE"
+INSTALLER_VERSION="v7.7-LEGACY-PROD-FIX"
 
 echo -e "\033[0;34mRPanel Installer Version: $INSTALLER_VERSION\033[0;0m"
 
@@ -91,8 +91,9 @@ run_quiet() {
   local msg="$1"
   shift
   echo -n -e "${BLUE}  - $msg... ${NC}"
+  # Security: Set DEBIAN_FRONTEND=noninteractive for all system commands to avoid UI traps
   # Propagate stdin to the command to support heredocs
-  if "$@" <&0 >> "$INSTALL_LOG" 2>&1; then
+  if DEBIAN_FRONTEND=noninteractive "$@" <&0 >> "$INSTALL_LOG" 2>&1; then
     echo -e "${GREEN}✓ DONE${NC}"
   else
     echo -e "${RED}✗ FAILED${NC}"
@@ -123,25 +124,25 @@ install_system_deps() {
     run_quiet "Adding Python PPA" add-apt-repository -y ppa:deadsnakes/ppa
     run_quiet "Updating package lists" apt-get update
 
-    # Install Essential System Tools
-    run_quiet "Installing system tools" apt-get install -y git curl redis-server xvfb libfontconfig wkhtmltopdf
+    # Install Essential System Tools (-qq for clean logs)
+    run_quiet "Installing system tools" apt-get install -y -qq git curl redis-server xvfb libfontconfig wkhtmltopdf
     
     # Install Python 3.14 (Required for Frappe v16)
-    run_quiet "Installing Python 3.14" apt-get install -y python3.14-dev python3.14-venv python3-pip python-is-python3
+    run_quiet "Installing Python 3.14" apt-get install -y -qq python3.14-dev python3.14-venv python3-pip python-is-python3
     
     # Install Postgres 16 (Native to Noble) + Matching Contrib & Vector
-    run_quiet "Installing PostgreSQL 16 & Extensions" apt-get install -y postgresql-16 postgresql-client-16 postgresql-contrib-16 postgresql-16-pgvector libpq-dev
+    run_quiet "Installing PostgreSQL 16 & Extensions" apt-get install -y -qq postgresql-16 postgresql-client-16 postgresql-contrib-16 postgresql-16-pgvector libpq-dev
   else
-    run_quiet "Installing repo tools" apt-get install -y software-properties-common
+    run_quiet "Installing repo tools" apt-get install -y -qq software-properties-common
     run_quiet "Adding Python PPA" add-apt-repository -y ppa:deadsnakes/ppa
     run_quiet "Updating package lists" apt-get update
     
-    run_quiet "Installing system dependencies" apt-get install -y git python3.14-dev python3.14-venv python3-pip python-is-python3 redis-server mariadb-server mariadb-client curl build-essential xvfb libfontconfig wkhtmltopdf libjpeg-dev zlib1g-dev
+    run_quiet "Installing system dependencies" apt-get install -y -qq git python3.14-dev python3.14-venv python3-pip python-is-python3 redis-server mariadb-server mariadb-client curl build-essential xvfb libfontconfig wkhtmltopdf libjpeg-dev zlib1g-dev
   fi
   
   # Configure Exim4 for internet mail
   echo -e "${GREEN}Installing email services...${NC}"
-  run_quiet "Installing Exim4 & OpenDKIM" apt-get install -y exim4 exim4-daemon-heavy opendkim opendkim-tools
+  run_quiet "Installing Exim4 & OpenDKIM" apt-get install -y -qq exim4 exim4-daemon-heavy opendkim opendkim-tools
   
   # Configure Exim4 for internet mail
   debconf-set-selections <<EOF
@@ -434,14 +435,15 @@ fi
 echo -e "${GREEN}Configuring production services...${NC}"
 
 # Ensure Supervisor is explicitly installed (Mandatory for production config generation)
-run_quiet "Installing Supervisor" apt-get install -y supervisor
+run_quiet "Installing Supervisor" apt-get install -y -qq supervisor
 run_quiet "Starting Supervisor" systemctl restart supervisor
 
-# Define the absolute path to bench to avoid "command not found" errors in CI
+# Define the absolute path to bench
 BENCH_BIN="/home/frappe/.local/bin/bench"
 
-# Run production setup with explicit PATH, absolute binary, and --user frappe to fix privilege escalation
-run_quiet "Generating production config" sudo -u frappe -i -H env PATH="/home/frappe/.local/bin:$PATH" "$BENCH_BIN" setup production frappe --yes --user frappe
+# Run production setup as root but targeting the frappe user.
+# In CI, running bench setup production as root with --user is often the most stable way to bypass privilege barriers.
+run_quiet "Generating production config" env PATH="/home/frappe/.local/bin:$PATH" "$BENCH_BIN" setup production frappe --yes --user frappe
 
 # Fix directory permissions so Nginx/www-data can traverse the frappe home directory (Mandatory for CI)
 run_quiet "Applying directory permissions for Nginx" chmod o+x /home/frappe /home/frappe/frappe-bench /home/frappe/frappe-bench/sites
