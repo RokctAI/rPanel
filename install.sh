@@ -12,6 +12,16 @@ BLUE='\033[0;34m'
 RED='\033[0;31m'
 NC='\033[0;0m'
 
+# Global Build Hardening (Required for resource-constrained environments to avoid SIGTERM 143)
+export CI=${CI:-true}
+export NODE_OPTIONS='--max-old-space-size=2560'
+export ESBUILD_WORKERS=1
+export MAX_WORKERS=1
+export CPU_COUNT=1
+export GENERATE_SOURCEMAP=false
+export NODE_ENV=production
+export YARN_NETWORK_TIMEOUT=300000
+
 # Log file for verbose output
 INSTALL_LOG="/tmp/rpanel_install.log"
 touch "$INSTALL_LOG"
@@ -194,8 +204,9 @@ setup_swap() {
   if [[ "$MODE" == "fresh" && ! -f /swapfile ]]; then
     # Check if we have less than 4GB of RAM
     local total_mem=$(free -m | grep -i mem | awk '{print $2}')
+    echo -e "${BLUE}System Memory: ${total_mem}MB${NC}"
     if [[ -n "$total_mem" && "$total_mem" -lt 4000 ]]; then
-      echo -e "${GREEN}Low memory detected (${total_mem}MB). Creating 2GB swap file...${NC}"
+      echo -e "${GREEN}Low memory detected. Creating 2GB swap file...${NC}"
       fallocate -l 2G /swapfile || dd if=/dev/zero of=/swapfile bs=1M count=2048
       chmod 600 /swapfile
       mkswap /swapfile
@@ -204,8 +215,6 @@ setup_swap() {
         echo "/swapfile swap swap defaults 0 0" >> /etc/fstab
       fi
       echo -e "${GREEN}✓ Swap enabled${NC}"
-    else
-      echo -e "${BLUE}Memory check: ${total_mem}MB. Skipping swap creation.${NC}"
     fi
   fi
 }
@@ -369,9 +378,8 @@ else
 fi
 
 # Define common sudo prefix for bench commands
-# Ultra-conservative limits: 2.5GB Node memory, Single-core, Single-worker, No Sourcemaps
-# This is required to prevent SIGTERM (143) OOM kills in CI/small VPS environments.
-BENCH_SUDO="sudo -u frappe -i -H env CI=${CI:-false} NODE_OPTIONS='--max-old-space-size=2560' ESBUILD_WORKERS=1 MAX_WORKERS=1 CPU_COUNT=1 GENERATE_SOURCEMAP=false NODE_ENV=production HOME=/home/frappe XDG_CONFIG_HOME=/home/frappe/.config XDG_DATA_HOME=/home/frappe/.local/share PATH=/usr/bin:/usr/local/bin:/home/frappe/.local/bin:$PATH"
+# Heredoc variables are now globally exported at the top of the script
+BENCH_SUDO="sudo -u frappe -i -H env CI=$CI NODE_OPTIONS=$NODE_OPTIONS ESBUILD_WORKERS=$ESBUILD_WORKERS MAX_WORKERS=$MAX_WORKERS CPU_COUNT=$CPU_COUNT GENERATE_SOURCEMAP=$GENERATE_SOURCEMAP NODE_ENV=$NODE_ENV HOME=/home/frappe XDG_CONFIG_HOME=/home/frappe/.config XDG_DATA_HOME=/home/frappe/.local/share PATH=/usr/bin:/usr/local/bin:/home/frappe/.local/bin:$PATH"
 
 if [ ! -d "/home/frappe/frappe-bench/apps/rpanel" ]; then
   run_quiet "Downloading RPanel app" $BENCH_SUDO bash -c "cd /home/frappe/frappe-bench && bench get-app https://github.com/RokctAI/rpanel.git $TAG_OPTION --skip-assets"
