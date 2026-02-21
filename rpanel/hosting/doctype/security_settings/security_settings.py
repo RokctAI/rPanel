@@ -26,8 +26,8 @@ class SecuritySettings(Document):
         """Enable 2FA for all users with System Manager role"""
         system_managers = frappe.get_all(
             'Has Role',
-                filters={'role': 'System Manager', 'parenttype': 'User'},
-                fields=['parent']
+            filters={'role': 'System Manager', 'parenttype': 'User'},
+            fields=['parent']
         )
 
         for manager in system_managers:
@@ -89,8 +89,8 @@ def enable_user_2fa(user=None):
 
     return {
         'qr_code': f'data:image/png;base64,{img_str}',
-            'secret': secret,
-            'message': 'Scan this QR code with Google Authenticator or Authy'
+        'secret': secret,
+        'message': 'Scan this QR code with Google Authenticator or Authy'
     }
 
 
@@ -137,7 +137,7 @@ def verify_and_enable_2fa(user=None, otp_code=None):
 
     return {
         'success': True,
-            'message': f'Two-Factor Authentication enabled for {user}'
+        'message': f'Two-Factor Authentication enabled for {user}'
     }
 
 
@@ -170,7 +170,7 @@ def disable_user_2fa(user=None):
 
     return {
         'success': True,
-            'message': f'Two-Factor Authentication disabled for {user}'
+        'message': f'Two-Factor Authentication disabled for {user}'
     }
 
 
@@ -189,8 +189,8 @@ def get_2fa_status():
 
     return {
         'system_2fa_enabled': settings.enable_2fa,
-            'enforce_for_admins': settings.enforce_2fa_for_admins,
-            'user_2fa_enabled': bool(user_2fa_enabled),
-            'total_users_with_2fa': settings.get('2fa_enabled_users', 0),
-            'issuer_name': settings.get('2fa_issuer_name', 'RPanel')
+        'enforce_for_admins': settings.enforce_2fa_for_admins,
+        'user_2fa_enabled': bool(user_2fa_enabled),
+        'total_users_with_2fa': settings.get('2fa_enabled_users', 0),
+        'issuer_name': settings.get('2fa_issuer_name', 'RPanel')
     }
