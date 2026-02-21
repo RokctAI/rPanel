@@ -25,7 +25,7 @@ class SecuritySettings(Document):
     def enforce_2fa_for_system_managers(self):
         """Enable 2FA for all users with System Manager role"""
         system_managers = frappe.get_all(
-                'Has Role',
+            'Has Role',
                 filters={'role': 'System Manager', 'parenttype': 'User'},
                 fields=['parent']
         )
@@ -64,8 +64,8 @@ def enable_user_2fa(user=None):
     # Generate TOTP URI
     totp = pyotp.TOTP(secret)
     uri = totp.provisioning_uri(
-            name=user,
-            issuer_name=issuer_name
+        name=user,
+        issuer_name=issuer_name
     )
 
     # Generate QR code
@@ -82,13 +82,13 @@ def enable_user_2fa(user=None):
 
     # Store secret temporarily (user will verify before it's saved permanently)
     frappe.cache().set_value(
-            f'2fa_temp_secret_{user}',
-            secret,
-            expires_in_sec=300  # 5 minutes
+        f'2fa_temp_secret_{user}',
+        secret,
+        expires_in_sec=300  # 5 minutes
     )
 
     return {
-            'qr_code': f'data:image/png;base64,{img_str}',
+        'qr_code': f'data:image/png;base64,{img_str}',
             'secret': secret,
             'message': 'Scan this QR code with Google Authenticator or Authy'
     }
@@ -136,7 +136,7 @@ def verify_and_enable_2fa(user=None, otp_code=None):
     settings.save()
 
     return {
-            'success': True,
+        'success': True,
             'message': f'Two-Factor Authentication enabled for {user}'
     }
 
@@ -169,7 +169,7 @@ def disable_user_2fa(user=None):
     settings.save()
 
     return {
-            'success': True,
+        'success': True,
             'message': f'Two-Factor Authentication disabled for {user}'
     }
 
@@ -188,7 +188,7 @@ def get_2fa_status():
     user_2fa_enabled = frappe.db.get_value('User', user, 'two_factor_auth')
 
     return {
-            'system_2fa_enabled': settings.enable_2fa,
+        'system_2fa_enabled': settings.enable_2fa,
             'enforce_for_admins': settings.enforce_2fa_for_admins,
             'user_2fa_enabled': bool(user_2fa_enabled),
             'total_users_with_2fa': settings.get('2fa_enabled_users', 0),
