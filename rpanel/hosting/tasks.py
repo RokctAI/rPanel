@@ -31,7 +31,8 @@ def check_ssl_expiry():
 
     if expiring_soon:
         # Send email alert
-        recipients = frappe.db.get_single_value('Hosting Settings', 'alert_email') or 'administrator@example.com'
+        recipients = frappe.db.get_single_value(
+            'Hosting Settings', 'alert_email') or 'administrator@example.com'
 
         message = "<h3>SSL Certificates Expiring Soon</h3><table border='1'>"
         message += "<tr><th>Domain</th><th>Days Left</th><th>Expiry Date</th></tr>"
@@ -47,7 +48,10 @@ def check_ssl_expiry():
             message=message
         )
 
-        frappe.log_error(f"SSL expiry alert sent for {len(expiring_soon)} certificates", "SSL Expiry Check")
+        frappe.log_error(
+            f"SSL expiry alert sent for {
+                len(expiring_soon)} certificates",
+            "SSL Expiry Check")
 
 
 def auto_renew_ssl():
@@ -66,9 +70,11 @@ def auto_renew_ssl():
             doc = frappe.get_doc('Hosted Website', site.name)
             doc.issue_ssl()
             frappe.db.commit()
-            frappe.log_error(f"Auto-renewed SSL for {site.domain}", "SSL Auto-Renewal")
+            frappe.log_error(
+                f"Auto-renewed SSL for {site.domain}", "SSL Auto-Renewal")
         except Exception as e:
-            frappe.log_error(f"Failed to auto-renew SSL for {site.domain}: {str(e)}", "SSL Auto-Renewal Error")
+            frappe.log_error(
+                f"Failed to auto-renew SSL for {site.domain}: {str(e)}", "SSL Auto-Renewal Error")
 
 
 def cleanup_old_backups():
@@ -82,7 +88,10 @@ def cleanup_old_backups():
 
         frappe.log_error("Cleaned up old backups", "Backup Cleanup")
     except Exception as e:
-        frappe.log_error(f"Backup cleanup failed: {str(e)}", "Backup Cleanup Error")
+        frappe.log_error(
+            f"Backup cleanup failed: {
+                str(e)}",
+            "Backup Cleanup Error")
 
 
 def hourly():
@@ -105,14 +114,16 @@ def check_site_health():
             protocol = 'https' if site.ssl_status == 'Active' else 'http'
             url = f"{protocol}://{site.domain}"
 
-            response = requests.get(url, timeout=10, verify=False)  # nosec B501 — internal health check
+            # nosec B501 — internal health check
+            response = requests.get(url, timeout=10, verify=False)
 
             if response.status_code >= 500:
                 # Server error - log it
                 frappe.log_error(
-                    f"Site {site.domain} returned status {response.status_code}",
-                    "Site Health Check"
-                )
+                    f"Site {
+                        site.domain} returned status {
+                        response.status_code}",
+                    "Site Health Check")
         except Exception as e:
             # Site is down or unreachable
             frappe.log_error(
@@ -159,19 +170,31 @@ def daily_service_version_check():
         # Send notification if updates are available
         updates_available = frappe.get_all(
             'Service Version',
-            filters={'update_available': 1},
-            fields=['service_name', 'service_type', 'current_version', 'latest_version', 'server']
-        )
+            filters={
+                'update_available': 1},
+            fields=[
+                'service_name',
+                'service_type',
+                'current_version',
+                'latest_version',
+                'server'])
 
         if updates_available:
             # Create notification for system managers
-            message = f"<h4>{len(updates_available)} service update(s) available</h4><ul>"
+            message = f"<h4>{
+                len(updates_available)} service update(s) available</h4><ul>"
             for service in updates_available:
-                message += f"<li><b>{service.service_type}</b> on {service.server}: {service.current_version} → {service.latest_version}</li>"
+                message += f"<li><b>{
+                    service.service_type}</b> on {
+                    service.server}: {
+                    service.current_version} → {
+                    service.latest_version}</li>"
             message += "</ul>"
 
             # Send to all System Managers
-            system_managers = frappe.get_all('Has Role', filters={'role': 'System Manager'}, fields=['parent'])
+            system_managers = frappe.get_all(
+                'Has Role', filters={
+                    'role': 'System Manager'}, fields=['parent'])
             for user in system_managers:
                 frappe.get_doc({
                     'doctype': 'Notification Log',
@@ -186,7 +209,9 @@ def daily_service_version_check():
             frappe.db.commit()
 
     except Exception as e:
-        frappe.log_error(f"Service version check failed: {str(e)}", "Service Version Check")
+        frappe.log_error(
+            f"Service version check failed: {
+                str(e)}", "Service Version Check")
 
 
 def daily_vulnerability_scan():
@@ -197,7 +222,9 @@ def daily_vulnerability_scan():
         result = schedule_daily_scans()
         frappe.logger().info(f"Daily vulnerability scans: {result}")
     except Exception as e:
-        frappe.log_error(f"Daily vulnerability scan failed: {str(e)}", "Scheduled Task Error")
+        frappe.log_error(
+            f"Daily vulnerability scan failed: {
+                str(e)}", "Scheduled Task Error")
 
 
 def cleanup_old_scans():
@@ -216,4 +243,6 @@ def cleanup_old_scans():
         frappe.delete_doc('Vulnerability Scan', scan, ignore_permissions=True)
 
     if old_scans:
-        frappe.logger().info(f"Cleaned up {len(old_scans)} old vulnerability scans")
+        frappe.logger().info(
+            f"Cleaned up {
+                len(old_scans)} old vulnerability scans")

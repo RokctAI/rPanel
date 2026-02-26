@@ -31,7 +31,8 @@ class SiteBackup(Document):
 
             # Get hosting settings for backup directory
             settings = frappe.get_single('Hosting Settings')
-            backup_dir = settings.get('backup_directory') or '/var/backups/websites'
+            backup_dir = settings.get(
+                'backup_directory') or '/var/backups/websites'
 
             # Ensure backup directory exists
             os.makedirs(backup_dir, exist_ok=True)
@@ -41,11 +42,14 @@ class SiteBackup(Document):
             backup_name = f"{website.domain}_{timestamp}"
 
             if self.backup_type == 'Full':
-                backup_file = self.create_full_backup(website, backup_dir, backup_name)
+                backup_file = self.create_full_backup(
+                    website, backup_dir, backup_name)
             elif self.backup_type == 'Database Only':
-                backup_file = self.create_database_backup(website, backup_dir, backup_name)
+                backup_file = self.create_database_backup(
+                    website, backup_dir, backup_name)
             elif self.backup_type == 'Files Only':
-                backup_file = self.create_files_backup(website, backup_dir, backup_name)
+                backup_file = self.create_files_backup(
+                    website, backup_dir, backup_name)
 
             # Get file size
             file_size = os.path.getsize(backup_file)
@@ -70,7 +74,9 @@ class SiteBackup(Document):
                     is_encrypted = 1
 
                 except Exception as e:
-                    frappe.log_error(f"Backup encryption failed: {str(e)}", "Backup Encryption Error")
+                    frappe.log_error(
+                        f"Backup encryption failed: {
+                            str(e)}", "Backup Encryption Error")
                     # Continue with unencrypted backup, but log error
 
             # Update backup record
@@ -84,7 +90,10 @@ class SiteBackup(Document):
             if self.cloud_storage != 'None':
                 self.upload_to_cloud(backup_file)
 
-            return {'success': True, 'file_path': backup_file, 'file_size': file_size}
+            return {
+                'success': True,
+                'file_path': backup_file,
+                'file_size': file_size}
 
         except Exception as e:
             self.db_set('status', 'Failed')
@@ -101,7 +110,9 @@ class SiteBackup(Document):
         db_dump = self.dump_database(website, backup_dir, backup_name)
 
         # Create tarball with files and database
-        cmd = f"tar -czf {backup_file} -C {website.site_path} . -C {backup_dir} {os.path.basename(db_dump)}"
+        cmd = f"tar -czf {backup_file} -C {
+            website.site_path} . -C {backup_dir} {
+            os.path.basename(db_dump)}"
         subprocess.run(shlex.split(cmd), check=True)
 
         # Remove temporary database dump
@@ -192,7 +203,8 @@ class SiteBackup(Document):
         dbx = dropbox.Dropbox(settings.get('dropbox_access_token'))
 
         with open(backup_file, 'rb') as f:
-            dbx.files_upload(f.read(), f"/backups/{os.path.basename(backup_file)}")
+            dbx.files_upload(f.read(),
+                             f"/backups/{os.path.basename(backup_file)}")
 
         return f"dropbox:/backups/{os.path.basename(backup_file)}"
 
@@ -283,7 +295,11 @@ class SiteBackup(Document):
 
 
 @frappe.whitelist()
-def create_backup(website, backup_type='Full', upload_to_cloud=False, cloud_storage='None'):
+def create_backup(
+        website,
+        backup_type='Full',
+        upload_to_cloud=False,
+        cloud_storage='None'):
     """Create a new backup"""
     if website == 'local_control_site':
         if "System Manager" not in frappe.get_roles():
@@ -343,9 +359,15 @@ def list_backups(website_name=None):
     backups = frappe.get_all(
         'Site Backup',
         filters=filters,
-        fields=['name', 'website', 'backup_type', 'backup_date', 'file_size', 'status', 'cloud_storage'],
-        order_by='backup_date desc'
-    )
+        fields=[
+            'name',
+            'website',
+            'backup_type',
+            'backup_date',
+            'file_size',
+            'status',
+            'cloud_storage'],
+        order_by='backup_date desc')
 
     return backups
 

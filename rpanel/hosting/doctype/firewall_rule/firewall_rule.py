@@ -49,7 +49,13 @@ class FirewallRule(Document):
     def remove_rule(self):
         """Remove UFW firewall rule"""
         try:
-            cmd = ["sudo", "ufw", "delete", self.rule_type.lower(), "from", self.ip_address]
+            cmd = [
+                "sudo",
+                "ufw",
+                "delete",
+                self.rule_type.lower(),
+                "from",
+                self.ip_address]
             subprocess.run(cmd, check=True)
         except Exception as e:
             frappe.log_error(f"Firewall rule remove failed: {str(e)}")
@@ -59,7 +65,8 @@ class FirewallRule(Document):
 def get_firewall_status():
     """Get UFW firewall status"""
     try:
-        result = subprocess.run(['sudo', 'ufw', 'status', 'verbose'], capture_output=True, text=True)
+        result = subprocess.run(
+            ['sudo', 'ufw', 'status', 'verbose'], capture_output=True, text=True)
         return {'success': True, 'status': result.stdout}
     except Exception as e:
         return {'success': False, 'error': str(e)}

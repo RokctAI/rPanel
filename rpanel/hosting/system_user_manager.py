@@ -1,3 +1,7 @@
+# Copyright (c) 2026, Rokct Intelligence (pty) Ltd.
+# For license information, please see license.txt
+
+
 """
 System User Manager for rpanel
 
@@ -60,7 +64,8 @@ class SystemUserManager:
             web_dir = f"/var/www/{username}"
             if not os.path.exists(web_dir):
                 subprocess.run(['sudo', 'mkdir', '-p', web_dir], check=True)
-                subprocess.run(['sudo', 'chown', f'{username}:www-data', web_dir], check=True)
+                subprocess.run(
+                    ['sudo', 'chown', f'{username}:www-data', web_dir], check=True)
                 subprocess.run(['sudo', 'chmod', '750', web_dir], check=True)
 
             frappe.msgprint(f"Created system user: {username}")
@@ -102,7 +107,9 @@ class SystemUserManager:
             site_name: Website domain name
         """
         # Check if reference already exists
-        if frappe.db.exists("System User Reference", {"user_name": username, "site_name": site_name}):
+        if frappe.db.exists(
+            "System User Reference", {
+                "user_name": username, "site_name": site_name}):
             return
 
         # Create reference record
@@ -129,7 +136,10 @@ class SystemUserManager:
         )
 
         for ref_name in refs:
-            frappe.delete_doc("System User Reference", ref_name, ignore_permissions=True)
+            frappe.delete_doc(
+                "System User Reference",
+                ref_name,
+                ignore_permissions=True)
 
         frappe.db.commit()
 
@@ -143,7 +153,9 @@ class SystemUserManager:
         Returns:
             int: Number of sites using this user
         """
-        return frappe.db.count("System User Reference", {"user_name": username})
+        return frappe.db.count(
+            "System User Reference", {
+                "user_name": username})
 
     def get_user_info(self, username):
         """Get information about a system user"""

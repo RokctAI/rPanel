@@ -19,7 +19,9 @@ def upload_to_google_drive(backup_name):
     folder_id = settings.get('google_drive_folder_id')
 
     if not credentials_file or not os.path.exists(credentials_file):
-        return {'success': False, 'error': 'Google Drive credentials not configured'}
+        return {
+            'success': False,
+            'error': 'Google Drive credentials not configured'}
 
     try:
         # Authenticate
@@ -155,8 +157,7 @@ def setup_google_drive():
     if not credentials_file or not os.path.exists(credentials_file):
         return {
             'success': False,
-            'error': 'Please upload Google Drive service account credentials JSON file'
-        }
+            'error': 'Please upload Google Drive service account credentials JSON file'}
 
     try:
         credentials = service_account.Credentials.from_service_account_file(

@@ -50,10 +50,17 @@ def get_email_logs(limit=100):
     try:
         logs = frappe.get_all(
             'Email Queue',
-            fields=['name', 'sender', 'recipients', 'subject', 'status', 'error', 'creation', 'modified'],
+            fields=[
+                'name',
+                'sender',
+                'recipients',
+                'subject',
+                'status',
+                'error',
+                'creation',
+                'modified'],
             order_by='creation desc',
-            limit=limit
-        )
+            limit=limit)
 
         return {'success': True, 'logs': logs}
     except Exception as e:
@@ -88,7 +95,10 @@ def retry_failed_emails():
 
 
 @frappe.whitelist()
-def send_test_email(recipient, subject='Test Email', body='This is a test email from ROKCT Hosting'):
+def send_test_email(
+        recipient,
+        subject='Test Email',
+        body='This is a test email from ROKCT Hosting'):
     """Send test email"""
     try:
         frappe.sendmail(
@@ -160,7 +170,8 @@ def generate_dkim_keys(domain, selector='default'):
             try:
                 os.makedirs(key_dir, exist_ok=True)
             except PermissionError:
-                key_dir = os.path.join(frappe.get_site_path(), 'private', 'dkim', domain)
+                key_dir = os.path.join(
+                    frappe.get_site_path(), 'private', 'dkim', domain)
                 os.makedirs(key_dir, exist_ok=True)
 
         # Generate keys
@@ -176,7 +187,8 @@ def generate_dkim_keys(domain, selector='default'):
             public_key_content = f.read()
 
         # Extract the actual p= value from the file
-        # The file format is like: default._domainkey IN TXT "v=DKIM1; k=rsa; p=..."
+        # The file format is like: default._domainkey IN TXT "v=DKIM1; k=rsa;
+        # p=..."
         import re
         match = re.search(r'p=([^"]+)', public_key_content)
         public_key_string = match.group(1) if match else ""

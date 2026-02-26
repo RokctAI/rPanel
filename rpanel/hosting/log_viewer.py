@@ -15,7 +15,8 @@ def get_nginx_access_log(website_name, lines=100):
             frappe.throw("Access Denied")
         # For local site, maybe return Frappe web logs or global nginx logs if accessible
         # Using frappe.log.web for now as proxy
-        log_file = os.path.join(frappe.utils.get_bench_path(), 'logs', 'web.log')
+        log_file = os.path.join(
+            frappe.utils.get_bench_path(), 'logs', 'web.log')
     else:
         website = frappe.get_doc('Hosted Website', website_name)
         log_file = f"/var/log/nginx/{website.domain}_access.log"
@@ -30,7 +31,10 @@ def get_nginx_error_log(website_name, lines=100):
         if "System Manager" not in frappe.get_roles():
             frappe.throw("Access Denied")
         # For local site, use frappe.log
-        log_file = os.path.join(frappe.utils.get_bench_path(), 'logs', 'frappe.web.log')
+        log_file = os.path.join(
+            frappe.utils.get_bench_path(),
+            'logs',
+            'frappe.web.log')
     else:
         website = frappe.get_doc('Hosted Website', website_name)
         log_file = f"/var/log/nginx/{website.domain}_error.log"
@@ -45,7 +49,10 @@ def get_php_error_log(website_name, lines=100):
         if "System Manager" not in frappe.get_roles():
             frappe.throw("Access Denied")
         # Local site is python, return worker logs
-        log_file = os.path.join(frappe.utils.get_bench_path(), 'logs', 'worker.log')
+        log_file = os.path.join(
+            frappe.utils.get_bench_path(),
+            'logs',
+            'worker.log')
     else:
         website = frappe.get_doc('Hosted Website', website_name)
         log_file = os.path.join(website.site_path, 'error.log')
@@ -60,16 +67,21 @@ def get_application_log(website_name, log_type='debug', lines=100):
         if "System Manager" not in frappe.get_roles():
             frappe.throw("Access Denied")
         # Local site scheduler logs
-        log_file = os.path.join(frappe.utils.get_bench_path(), 'logs', 'schedule.log')
+        log_file = os.path.join(
+            frappe.utils.get_bench_path(),
+            'logs',
+            'schedule.log')
     else:
         website = frappe.get_doc('Hosted Website', website_name)
 
         # WordPress debug log
         if website.cms_type == 'WordPress':
-            log_file = os.path.join(website.site_path, 'wp-content', 'debug.log')
+            log_file = os.path.join(
+                website.site_path, 'wp-content', 'debug.log')
         else:
             # Generic application log
-            log_file = os.path.join(website.site_path, 'storage', 'logs', 'laravel.log')
+            log_file = os.path.join(
+                website.site_path, 'storage', 'logs', 'laravel.log')
 
     return read_log_file(log_file, lines)
 
@@ -132,7 +144,8 @@ def tail_log(website_name, log_type, since_timestamp=None):  # noqa: C901
         elif log_type == 'php_error':
             log_file = os.path.join(website.site_path, 'error.log')
         else:
-            log_file = os.path.join(website.site_path, 'wp-content', 'debug.log')
+            log_file = os.path.join(
+                website.site_path, 'wp-content', 'debug.log')
 
     if not os.path.exists(log_file):
         return {'success': False, 'error': 'Log file not found'}
@@ -261,7 +274,8 @@ def get_log_stats(website_name):
                 # Get line count (Avoid shell=True)
                 cmd = ["wc", "-l", log_file]
                 result = subprocess.run(cmd, capture_output=True, text=True)
-                line_count = int(result.stdout.split()[0]) if result.returncode == 0 else 0
+                line_count = int(
+                    result.stdout.split()[0]) if result.returncode == 0 else 0
 
                 # Get last modified time
                 mod_time = datetime.fromtimestamp(os.path.getmtime(log_file))

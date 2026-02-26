@@ -1,3 +1,7 @@
+# Copyright (c) 2026, Rokct Intelligence (pty) Ltd.
+# For license information, please see license.txt
+
+
 """
 PHP-FPM Pool Manager for rpanel
 
@@ -16,13 +20,16 @@ class PHPFPMManager:
 
     def __init__(self, php_version=None):
         self.php_version = php_version or ServiceIntelligence.get_default_php_version()
-        self.pool_dir = Path(ServiceIntelligence.get_php_fpm_pool_dir(self.php_version))
+        self.pool_dir = Path(
+            ServiceIntelligence.get_php_fpm_pool_dir(
+                self.php_version))
 
     def create_pool(self, domain, system_user, max_children=5):
         """
         Create dedicated PHP-FPM pool for a site
         """
-        socket_path = ServiceIntelligence.get_php_fpm_socket(self.php_version, system_user)
+        socket_path = ServiceIntelligence.get_php_fpm_socket(
+            self.php_version, system_user)
         pool_file = self.pool_dir / f"{domain}.conf"
 
         # Check if pool already exists
@@ -75,7 +82,8 @@ php_admin_value[post_max_size] = 64M
                 stdout=subprocess.DEVNULL
             )
 
-            subprocess.run(['sudo', 'chmod', '644', str(pool_file)], check=True)
+            subprocess.run(
+                ['sudo', 'chmod', '644', str(pool_file)], check=True)
 
             # Test PHP-FPM config
             result = subprocess.run(
@@ -95,7 +103,8 @@ php_admin_value[post_max_size] = 64M
                 check=True
             )
 
-            frappe.msgprint(f"Created PHP-FPM pool for {domain} running as {system_user}")
+            frappe.msgprint(
+                f"Created PHP-FPM pool for {domain} running as {system_user}")
             return socket_path
 
         except subprocess.CalledProcessError as e:
@@ -132,7 +141,8 @@ php_admin_value[post_max_size] = 64M
 
     def get_socket_path(self, system_user):
         """Get socket path for a system user"""
-        return ServiceIntelligence.get_php_fpm_socket(self.php_version, system_user)
+        return ServiceIntelligence.get_php_fpm_socket(
+            self.php_version, system_user)
 
 
 def create_php_pool(domain, system_user, php_version=None):

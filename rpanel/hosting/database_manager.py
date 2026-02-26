@@ -43,7 +43,14 @@ def get_tables(database_name):
             result = subprocess.run(cmd, capture_output=True, text=True)
         else:
             # Security: Use list to prevent command injection
-            cmd = ["mysql", "-u", "root", "-e", "SHOW TABLES", database_name, "--json"]
+            cmd = [
+                "mysql",
+                "-u",
+                "root",
+                "-e",
+                "SHOW TABLES",
+                database_name,
+                "--json"]
             result = subprocess.run(cmd, capture_output=True, text=True)
 
         if result.returncode == 0:
@@ -66,7 +73,14 @@ def get_table_structure(database_name, table_name):
             result = subprocess.run(cmd, capture_output=True, text=True)
         else:
             # Security: Use list to prevent command injection
-            cmd = ["mysql", "-u", "root", "-e", f"DESCRIBE {table_name}", database_name, "--json"]
+            cmd = [
+                "mysql",
+                "-u",
+                "root",
+                "-e",
+                f"DESCRIBE {table_name}",
+                database_name,
+                "--json"]
             result = subprocess.run(cmd, capture_output=True, text=True)
 
         if result.returncode == 0:

@@ -2,7 +2,8 @@
 import unittest
 from unittest.mock import patch, MagicMock, mock_open
 import frappe
-# Import the module to test. Note: This assumes rpanel is in python path or installed in bench
+# Import the module to test. Note: This assumes rpanel is in python path
+# or installed in bench
 from rpanel.hosting.doctype.hosted_website.hosted_website import HostedWebsite
 
 
@@ -47,7 +48,17 @@ class TestHostedWebsite(unittest.TestCase):
     @patch('rpanel.hosting.doctype.hosted_website.hosted_website.run_certbot')
     @patch('rpanel.hosting.doctype.hosted_website.hosted_website.update_exim_config')
     @patch('builtins.open', new_callable=mock_open)
-    def test_provision_site_success(self, mock_file, mock_exim, mock_certbot, mock_pg, mock_mysql, mock_exists, mock_run, MockPHP, MockUser):
+    def test_provision_site_success(
+            self,
+            mock_file,
+            mock_exim,
+            mock_certbot,
+            mock_pg,
+            mock_mysql,
+            mock_exists,
+            mock_run,
+            MockPHP,
+            MockUser):
         """Test successful site provisioning for a CMS"""
         # Setup mocks
         mock_exists.return_value = False  # Directory doesn't exist yet
@@ -64,10 +75,12 @@ class TestHostedWebsite(unittest.TestCase):
         # Mock NginxManager inside HostedWebsite?
         # The code does `self.update_nginx_config()` which writes files.
         # HostedWebsite.update_nginx_config writes to /etc/nginx... we need to mock open/subprocess there too within the method
-        # But we mocked subprocess.run globally for the module, so that should cover it.
+        # But we mocked subprocess.run globally for the module, so that should
+        # cover it.
 
         # Execute
-        # We need to mock install_wordpress separately to avoid those specific calls if they are complex
+        # We need to mock install_wordpress separately to avoid those specific
+        # calls if they are complex
         with patch.object(self.doc, 'install_wordpress') as mock_install:
             self.doc.provision_site()
 
@@ -100,7 +113,8 @@ class TestHostedWebsite(unittest.TestCase):
             self.doc.validate()
 
         self.doc.domain = "valid-domain.com"
-        # Since we are testing validate(), we might need to mock check_client_quota too if it hits DB
+        # Since we are testing validate(), we might need to mock
+        # check_client_quota too if it hits DB
         with patch.object(self.doc, 'check_client_quota') as mock_quota:  # noqa: F841
             self.doc.validate()
             # Should pass without error
@@ -131,4 +145,6 @@ class TestHostedWebsite(unittest.TestCase):
             if 'rm' in args and '/etc/nginx/conf.d/test.example.com.conf' in args:
                 called_rm_nginx = True
 
-        self.assertTrue(called_rm_nginx, "Should attempt to remove Nginx config")
+        self.assertTrue(
+            called_rm_nginx,
+            "Should attempt to remove Nginx config")

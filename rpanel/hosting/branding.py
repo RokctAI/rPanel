@@ -10,9 +10,10 @@ def get_client_branding(user=None):
         user = frappe.session.user
 
     # Check if user is linked to a hosting client
-    client = frappe.db.get_value('Hosting Client', {'email': user},
-                                 ['name', 'custom_logo', 'brand_color', 'portal_enabled'],
-                                 as_dict=True)
+    client = frappe.db.get_value(
+        'Hosting Client', {
+            'email': user}, [
+            'name', 'custom_logo', 'brand_color', 'portal_enabled'], as_dict=True)
 
     if client and client.portal_enabled:
         return {

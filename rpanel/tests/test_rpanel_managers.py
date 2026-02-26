@@ -28,12 +28,15 @@ class TestNginxManager(unittest.TestCase):
         self.assertTrue(mock_run.called)
 
         # Verify checking for protected configs
-        self.assertFalse(self.manager.is_protected_config("rpanel-test_example_com.conf"))
+        self.assertFalse(self.manager.is_protected_config(
+            "rpanel-test_example_com.conf"))
 
     def test_is_protected_config(self):
         """Test protected configuration detection"""
-        self.assertTrue(self.manager.is_protected_config("frappe-bench-frappe"))
-        self.assertFalse(self.manager.is_protected_config("rpanel-random-site.conf"))
+        self.assertTrue(
+            self.manager.is_protected_config("frappe-bench-frappe"))
+        self.assertFalse(
+            self.manager.is_protected_config("rpanel-random-site.conf"))
 
     @patch('rpanel.hosting.nginx_manager.subprocess.run')
     def test_enable_disable_site(self, mock_run):
@@ -55,7 +58,8 @@ class TestNginxManager(unittest.TestCase):
     def test_test_and_reload_success(self, mock_run):
         """Test successful Nginx reload"""
         # Mock nginx -t success
-        mock_run.return_value = MagicMock(returncode=0, stdout="syntax is ok", stderr="")
+        mock_run.return_value = MagicMock(
+            returncode=0, stdout="syntax is ok", stderr="")
 
         self.manager.test_and_reload()
 
@@ -73,7 +77,8 @@ class TestDatabaseManager(unittest.TestCase):
     @patch('rpanel.hosting.database_manager.subprocess.run')
     def test_execute_query_select(self, mock_run):
         """Test executing valid SELECT query"""
-        mock_run.return_value = MagicMock(returncode=0, stdout='[{"id": 1, "name": "Test"}]')
+        mock_run.return_value = MagicMock(
+            returncode=0, stdout='[{"id": 1, "name": "Test"}]')
 
         result = execute_query("test_db", "SELECT * FROM users")
 
@@ -90,7 +95,8 @@ class TestDatabaseManager(unittest.TestCase):
     @patch('rpanel.hosting.database_manager.subprocess.run')
     def test_get_tables(self, mock_run):
         """Test retrieving tables"""
-        mock_run.return_value = MagicMock(returncode=0, stdout='["table1", "table2"]')
+        mock_run.return_value = MagicMock(
+            returncode=0, stdout='["table1", "table2"]')
 
         result = get_tables("test_db")
 
@@ -152,8 +158,15 @@ class TestEmailManager(unittest.TestCase):
     @patch('rpanel.hosting.email_manager.os.path.exists')
     @patch('rpanel.hosting.email_manager.os.makedirs')
     @patch('rpanel.hosting.email_manager.os.rename')
-    @patch('builtins.open', new_callable=mock_open, read_data='p=MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQ')
-    def test_generate_dkim_keys(self, mock_file, mock_rename, mock_makedirs, mock_exists, mock_run):
+    @patch('builtins.open', new_callable=mock_open,
+           read_data='p=MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQ')
+    def test_generate_dkim_keys(
+            self,
+            mock_file,
+            mock_rename,
+            mock_makedirs,
+            mock_exists,
+            mock_run):
         """Test DKIM key generation"""
         mock_exists.return_value = False
 
@@ -161,7 +174,9 @@ class TestEmailManager(unittest.TestCase):
 
         self.assertTrue(result['success'])
         mock_run.assert_called()  # Verify opendkim-genkey called
-        self.assertEqual(result['public_key'], "MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQ")
+        self.assertEqual(
+            result['public_key'],
+            "MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQ")
 
     def test_get_spf_record(self):
         """Test SPF record generation"""
@@ -169,7 +184,8 @@ class TestEmailManager(unittest.TestCase):
         record = get_spf_record("test.com", "1.2.3.4")
         self.assertIn("ip4:1.2.3.4", record['value'])
 
-        # Test with default (mocking socket would be needed to be precise, but structure check is enough)
+        # Test with default (mocking socket would be needed to be precise, but
+        # structure check is enough)
         with patch('socket.gethostbyname') as mock_ip:
             mock_ip.return_value = "127.0.0.1"
             record = get_spf_record("test.com")

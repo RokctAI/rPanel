@@ -19,7 +19,13 @@ def check_service_updates(server_name=None):
     if server_name:
         filters['server'] = server_name
 
-    services = frappe.get_all('Service Version', filters=filters, fields=['name', 'service_type', 'server'])
+    services = frappe.get_all(
+        'Service Version',
+        filters=filters,
+        fields=[
+            'name',
+            'service_type',
+            'server'])
 
     for service in services:
         doc = frappe.get_doc('Service Version', service.name)
@@ -49,8 +55,7 @@ def _check_version(doc):
         'Fail2Ban': "fail2ban-client version",
         'Certbot': "certbot --version | awk '{print $2}'",
         'Exim4': "exim4 --version | head -n 1 | awk '{print $3}'",
-        'Dovecot': "dovecot --version | awk '{print $1}'"
-    }
+        'Dovecot': "dovecot --version | awk '{print $1}'"}
 
     # Commands to check latest available version
     latest_commands = {
@@ -64,18 +69,19 @@ def _check_version(doc):
         'Fail2Ban': "apt-cache policy fail2ban | grep Candidate | awk '{print $2}'",
         'Certbot': "apt-cache policy certbot | grep Candidate | awk '{print $2}'",
         'Exim4': "apt-cache policy exim4 | grep Candidate | awk '{print $2}'",
-        'Dovecot': "apt-cache policy dovecot-core | grep Candidate | awk '{print $2}'"
-    }
+        'Dovecot': "apt-cache policy dovecot-core | grep Candidate | awk '{print $2}'"}
 
     if service_type in version_commands:
         # Get current version
-        result = execute_remote_command(server_name, version_commands[service_type])
+        result = execute_remote_command(
+            server_name, version_commands[service_type])
         if result.get('success'):
             current_version = result.get('output', '').strip()
             doc.current_version = current_version
 
         # Get latest version
-        result = execute_remote_command(server_name, latest_commands[service_type])
+        result = execute_remote_command(
+            server_name, latest_commands[service_type])
         if result.get('success'):
             latest_version = result.get('output', '').strip()
             doc.latest_version = latest_version
@@ -112,11 +118,11 @@ def update_service(service_name):
         'Fail2Ban': "apt-get update && apt-get install --only-upgrade -y fail2ban && systemctl restart fail2ban",
         'Certbot': "apt-get update && apt-get install --only-upgrade -y certbot python3-certbot-nginx",
         'Exim4': "apt-get update && apt-get install --only-upgrade -y exim4 exim4-daemon-heavy && systemctl restart exim4",
-        'Dovecot': "apt-get update && apt-get install --only-upgrade -y dovecot-core dovecot-imapd dovecot-pop3d && systemctl restart dovecot"
-    }
+        'Dovecot': "apt-get update && apt-get install --only-upgrade -y dovecot-core dovecot-imapd dovecot-pop3d && systemctl restart dovecot"}
 
     if service_type in update_commands:
-        result = execute_remote_command(server_name, update_commands[service_type], timeout=600)
+        result = execute_remote_command(
+            server_name, update_commands[service_type], timeout=600)
 
         if result.get('success'):
             # Re-check version after update
@@ -126,9 +132,9 @@ def update_service(service_name):
 
             return {
                 "success": True,
-                "message": f"{service_type} updated successfully to {doc.current_version}",
-                "new_version": doc.current_version
-            }
+                "message": f"{service_type} updated successfully to {
+                    doc.current_version}",
+                "new_version": doc.current_version}
         else:
             return {
                 "success": False,

@@ -23,9 +23,12 @@ def setup_phpmyadmin(website_name):
             ], check=True)
 
             # Extract
-            subprocess.run([
-                "tar", "-xzf", "/tmp/phpMyAdmin-latest-all-languages.tar.gz", "-C", "/tmp"
-            ], check=True)
+            subprocess.run(["tar",
+                            "-xzf",
+                            "/tmp/phpMyAdmin-latest-all-languages.tar.gz",
+                            "-C",
+                            "/tmp"],
+                           check=True)
 
             # Move to /usr/share (resolve wildcard in Python)
             matches = glob.glob("/tmp/phpMyAdmin-*-all-languages")
@@ -55,7 +58,8 @@ $cfg['SaveDir'] = '';
             f.write(config)
 
         # Set permissions
-        subprocess.run(["chown", "-R", "www-data:www-data", pma_link], check=True)
+        subprocess.run(
+            ["chown", "-R", "www-data:www-data", pma_link], check=True)
 
         pma_url = f"https://{website.domain}/phpmyadmin"
 

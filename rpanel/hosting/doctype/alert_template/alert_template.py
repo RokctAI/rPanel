@@ -82,7 +82,8 @@ def preview_template(template_name, sample_data=None):
 
     # Use provided sample data or template's sample data
     if sample_data:
-        data = json.loads(sample_data) if isinstance(sample_data, str) else sample_data
+        data = json.loads(sample_data) if isinstance(
+            sample_data, str) else sample_data
     elif template.sample_data:
         data = json.loads(template.sample_data)
     else:

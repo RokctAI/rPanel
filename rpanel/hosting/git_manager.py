@@ -40,7 +40,9 @@ def clone_repository(website_name, repo_url, branch='main', deploy_key=None):
             website.db_set('deployment_status', 'Success')
             frappe.db.commit()
 
-            return {'success': True, 'message': 'Repository cloned successfully'}
+            return {
+                'success': True,
+                'message': 'Repository cloned successfully'}
         else:
             return {'success': False, 'error': result.stderr}
 
@@ -72,7 +74,10 @@ def pull_latest(website_name):
             website.db_set('deployment_status', 'Success')
             frappe.db.commit()
 
-            return {'success': True, 'message': 'Pulled latest changes', 'output': result.stdout}
+            return {
+                'success': True,
+                'message': 'Pulled latest changes',
+                'output': result.stdout}
         else:
             website.db_set('deployment_status', 'Failed')
             frappe.db.commit()
@@ -143,7 +148,10 @@ def get_branches(website_name):
         )
 
         if result.returncode == 0:
-            branches = [b.strip().replace('origin/', '') for b in result.stdout.split('\n') if b.strip() and 'HEAD' not in b]
+            branches = [
+                b.strip().replace(
+                    'origin/',
+                    '') for b in result.stdout.split('\n') if b.strip() and 'HEAD' not in b]
             return {'success': True, 'branches': branches}
         else:
             return {'success': False, 'error': result.stderr}
@@ -220,7 +228,8 @@ def rollback_deployment(website_name, commit_hash):
             website.db_set('deployment_status', 'Rolled Back')
             frappe.db.commit()
 
-            return {'success': True, 'message': f'Rolled back to {commit_hash[:7]}'}
+            return {'success': True,
+                    'message': f'Rolled back to {commit_hash[:7]}'}
         else:
             return {'success': False, 'error': result.stderr}
 
@@ -264,7 +273,8 @@ def handle_webhook(**kwargs):
         website = frappe.get_doc('Hosted Website', website_name)
 
         # Verify webhook signature
-        signature = frappe.request.headers.get('X-Hub-Signature-256') or frappe.request.headers.get('X-Gitlab-Token')
+        signature = frappe.request.headers.get(
+            'X-Hub-Signature-256') or frappe.request.headers.get('X-Gitlab-Token')
 
         if website.webhook_secret:
             # Verify signature for GitHub
@@ -311,7 +321,13 @@ def get_git_status(website_name):
         )
 
         # Get current branch
-        cmd = ["git", "-C", website.site_path, "rev-parse", "--abbrev-ref", "HEAD"]
+        cmd = [
+            "git",
+            "-C",
+            website.site_path,
+            "rev-parse",
+            "--abbrev-ref",
+            "HEAD"]
         branch_result = subprocess.run(
             cmd,
             capture_output=True,
@@ -320,7 +336,8 @@ def get_git_status(website_name):
         )
 
         # Get latest commit
-        cmd = ["git", "-C", website.site_path, "log", "-1", "--pretty=format:%H|%s|%an|%ad", "--date=short"]
+        cmd = ["git", "-C", website.site_path, "log", "-1",
+               "--pretty=format:%H|%s|%an|%ad", "--date=short"]
         commit_result = subprocess.run(
             cmd,
             capture_output=True,
@@ -330,10 +347,10 @@ def get_git_status(website_name):
 
         status = {
             'success': True,
-            'is_clean': len(result.stdout.strip()) == 0,
+            'is_clean': len(
+                result.stdout.strip()) == 0,
             'current_branch': branch_result.stdout.strip(),
-            'changes': result.stdout.strip().split('\n') if result.stdout.strip() else []
-        }
+            'changes': result.stdout.strip().split('\n') if result.stdout.strip() else []}
 
         if commit_result.stdout.strip():
             parts = commit_result.stdout.strip().split('|')

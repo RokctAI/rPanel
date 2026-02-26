@@ -1,3 +1,7 @@
+# Copyright (c) 2026, Rokct Intelligence (pty) Ltd.
+# For license information, please see license.txt
+
+
 """
 Secure MySQL/MariaDB command execution utilities.
 
@@ -99,7 +103,8 @@ def run_mysqldump(
         if as_sudo:
             cmd.append("sudo")
 
-        cmd.extend(["mysqldump", f"--defaults-extra-file={config_file}", database])
+        cmd.extend(
+            ["mysqldump", f"--defaults-extra-file={config_file}", database])
 
         if tables:
             cmd.extend(tables)
@@ -159,7 +164,10 @@ def run_mysql_restore(
             os.remove(config_file)
 
 
-def _create_mysql_config(user: str, password: Optional[str], host: str = "localhost") -> str:
+def _create_mysql_config(
+        user: str,
+        password: Optional[str],
+        host: str = "localhost") -> str:
     """
     Create a temporary MySQL config file with credentials.
 
@@ -182,7 +190,8 @@ host={host}
         config_content += f"password={password}\n"
 
     # Create temporary file
-    fd, config_path = tempfile.mkstemp(suffix='.cnf', prefix='mysql_', text=True)
+    fd, config_path = tempfile.mkstemp(
+        suffix='.cnf', prefix='mysql_', text=True)
 
     try:
         # Write config to file
@@ -211,11 +220,16 @@ def get_db_password_from_config() -> str:
     import json
 
     try:
-        config_path = os.path.join(frappe.utils.get_bench_path(), 'sites', 'common_site_config.json')
+        config_path = os.path.join(
+            frappe.utils.get_bench_path(),
+            'sites',
+            'common_site_config.json')
         with open(config_path, 'r') as f:
             config = json.load(f)
 
         return config.get('db_password') or config.get('root_password', '')
     except Exception as e:
-        frappe.log_error(f"Could not read MariaDB password from config: {str(e)}")
+        frappe.log_error(
+            f"Could not read MariaDB password from config: {
+                str(e)}")
         return ''
