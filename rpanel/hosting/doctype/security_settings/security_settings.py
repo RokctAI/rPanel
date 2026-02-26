@@ -14,7 +14,10 @@ class SecuritySettings(Document):
         """Validate security settings"""
         if self.enable_2fa:
             # Count users with 2FA enabled
-            self.set('2fa_enabled_users', frappe.db.count('User', {'two_factor_auth': 1}))
+            self.set(
+                '2fa_enabled_users', frappe.db.count(
+                    'User', {
+                        'two_factor_auth': 1}))
 
     def on_update(self):
         """Handle settings updates"""
@@ -33,7 +36,8 @@ class SecuritySettings(Document):
         for manager in system_managers:
             user = manager.parent
             if not frappe.db.get_value('User', user, 'two_factor_auth'):
-                frappe.msgprint(f"2FA enforcement: User {user} needs to enable 2FA")
+                frappe.msgprint(
+                    f"2FA enforcement: User {user} needs to enable 2FA")
 
 
 @frappe.whitelist()
@@ -51,7 +55,8 @@ def enable_user_2fa(user=None):
         user = frappe.session.user
 
     # Check permissions
-    if frappe.session.user != user and not frappe.has_permission('User', 'write'):
+    if frappe.session.user != user and not frappe.has_permission(
+            'User', 'write'):
         frappe.throw("Not permitted")
 
     # Generate secret
@@ -156,7 +161,8 @@ def disable_user_2fa(user=None):
         user = frappe.session.user
 
     # Check permissions
-    if frappe.session.user != user and not frappe.has_permission('User', 'write'):
+    if frappe.session.user != user and not frappe.has_permission(
+            'User', 'write'):
         frappe.throw("Not permitted")
 
     # Disable 2FA

@@ -232,10 +232,12 @@ def rename_file(website_name, old_path, new_name):
     new_full_path = os.path.join(parent_dir, new_name)
 
     # Security checks
-    if not os.path.abspath(old_full_path).startswith(os.path.abspath(base_path)):
+    if not os.path.abspath(old_full_path).startswith(
+            os.path.abspath(base_path)):
         frappe.throw("Invalid path - access denied")
 
-    if not os.path.abspath(new_full_path).startswith(os.path.abspath(base_path)):
+    if not os.path.abspath(new_full_path).startswith(
+            os.path.abspath(base_path)):
         frappe.throw("Invalid path - access denied")
 
     if not os.path.exists(old_full_path):

@@ -1,3 +1,7 @@
+# Copyright (c) 2026, Rokct Intelligence (pty) Ltd.
+# For license information, please see license.txt
+
+
 import subprocess
 import os
 import frappe
@@ -57,7 +61,8 @@ def update_exim_config(domain, accounts):  # noqa: C901
                 if "@" in user_part:
                     user_domain = user_part.split("@")[-1]
                     if user_domain == domain:
-                        # Skip this line as it belongs to the domain we are updating
+                        # Skip this line as it belongs to the domain we are
+                        # updating
                         continue
             new_lines.append(line)
 
@@ -67,7 +72,10 @@ def update_exim_config(domain, accounts):  # noqa: C901
 
             # --- SECURE HASH REPLACEMENT FOR CRYPT ---
             # Generate random 16-char salt
-            salt = ''.join(secrets.choice(string.ascii_letters + string.digits) for _ in range(16))
+            salt = ''.join(
+                secrets.choice(
+                    string.ascii_letters +
+                    string.digits) for _ in range(16))
 
             # Use openssl to generate SHA-512 crypt hash ($6$)
             # We pass password via stdin to prevent exposure in 'ps aux'
@@ -82,7 +90,9 @@ def update_exim_config(domain, accounts):  # noqa: C901
                 hashed = proc.stdout.strip()
                 new_lines.append(f"{full_user}:{hashed}\n")
             except subprocess.CalledProcessError as e:
-                frappe.log_error(f"Password hashing failed for {full_user}: {e.stderr}")
+                frappe.log_error(
+                    f"Password hashing failed for {full_user}: {
+                        e.stderr}")
                 continue
             # -----------------------------------------
 
@@ -92,7 +102,8 @@ def update_exim_config(domain, accounts):  # noqa: C901
             f.writelines(new_lines)
 
         subprocess.run(["sudo", "mv", temp_passwd, passwd_file], check=True)
-        subprocess.run(["sudo", "chown", "root:exim", passwd_file], check=False)
+        subprocess.run(["sudo", "chown", "root:exim",
+                       passwd_file], check=False)
         subprocess.run(["sudo", "chmod", "640", passwd_file], check=False)
 
         # 2. Update Virtual Map (Aliases/Forwarding)
@@ -114,8 +125,10 @@ def update_exim_config(domain, accounts):  # noqa: C901
 
                 # Ensure Maildir exists
                 if not os.path.exists(mail_path):
-                    subprocess.run(["sudo", "mkdir", "-p", mail_path], check=True)
-                    subprocess.run(["sudo", "chown", "-R", "exim:exim", mail_path], check=False)
+                    subprocess.run(
+                        ["sudo", "mkdir", "-p", mail_path], check=True)
+                    subprocess.run(
+                        ["sudo", "chown", "-R", "exim:exim", mail_path], check=False)
 
         temp_virtual = f"/tmp/exim_virtual_{domain}"
         with open(temp_virtual, "w") as f:

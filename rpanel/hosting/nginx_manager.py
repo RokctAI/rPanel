@@ -18,7 +18,8 @@ from rpanel.hosting.service_intelligence import ServiceIntelligence
 
 # Protected config files that RPanel should NEVER modify
 PROTECTED_CONFIGS = [
-    'frappe-bench-frappe',      # Frappe bench (created by bench setup production)
+    # Frappe bench (created by bench setup production)
+    'frappe-bench-frappe',
     'default',                   # System default
 ]
 
@@ -64,10 +65,12 @@ class NginxManager:
 
         # Check if this would conflict with protected configs
         if self.is_protected_config(config_name):
-            frappe.throw(f"Cannot create config '{config_name}' - this filename is protected")
+            frappe.throw(
+                f"Cannot create config '{config_name}' - this filename is protected")
 
         # Generate Nginx config
-        config_content = self._generate_website_config(domain, site_path, php_version)
+        config_content = self._generate_website_config(
+            domain, site_path, php_version)
 
         # Write config file
         try:
@@ -81,7 +84,8 @@ class NginxManager:
             )
 
             # Set proper permissions
-            subprocess.run(['sudo', 'chmod', '644', str(config_path)], check=True)
+            subprocess.run(
+                ['sudo', 'chmod', '644', str(config_path)], check=True)
 
             # Enable the site
             self.enable_site(config_name)
@@ -92,7 +96,9 @@ class NginxManager:
             frappe.msgprint(f"Nginx configuration created for {domain}")
 
         except Exception as e:
-            frappe.log_error(f"Failed to create Nginx config for {domain}: {str(e)}")
+            frappe.log_error(
+                f"Failed to create Nginx config for {domain}: {
+                    str(e)}")
             frappe.throw(f"Failed to create Nginx configuration: {str(e)}")
 
     def _generate_website_config(self, domain, site_path, php_version):
@@ -167,7 +173,8 @@ server {{
             subprocess.run(['sudo', 'rm', '-f', str(target)], check=True)
 
         # Create symlink
-        subprocess.run(['sudo', 'ln', '-s', str(source), str(target)], check=True)
+        subprocess.run(
+            ['sudo', 'ln', '-s', str(source), str(target)], check=True)
 
     def disable_site(self, config_name):
         """Disable a site by removing symlink from sites-enabled"""
@@ -209,7 +216,8 @@ server {{
                 frappe.throw(f"Nginx configuration error: {error_msg}")
 
             # Reload Nginx
-            subprocess.run(['sudo', 'systemctl', 'reload', 'nginx'], check=True)
+            subprocess.run(
+                ['sudo', 'systemctl', 'reload', 'nginx'], check=True)
 
         except subprocess.CalledProcessError as e:
             frappe.log_error(f"Failed to reload Nginx: {str(e)}")
@@ -248,7 +256,8 @@ limit_req zone=rpanel_general burst=20 nodelay;
                 stdout=subprocess.DEVNULL
             )
 
-            subprocess.run(['sudo', 'chmod', '644', str(rate_limit_config)], check=True)
+            subprocess.run(['sudo', 'chmod', '644', str(
+                rate_limit_config)], check=True)
 
             print("✓ RPanel rate limiting configured")
 
@@ -353,5 +362,7 @@ def secure_website_permissions(site_path, owner='www-data'):
         frappe.msgprint(f"File permissions secured for {site_path}")
 
     except subprocess.CalledProcessError as e:
-        frappe.log_error(f"Failed to secure permissions for {site_path}: {str(e)}")
+        frappe.log_error(
+            f"Failed to secure permissions for {site_path}: {
+                str(e)}")
         frappe.throw(f"Failed to secure file permissions: {str(e)}")

@@ -1,3 +1,7 @@
+# Copyright (c) 2026, Rokct Intelligence (pty) Ltd.
+# For license information, please see license.txt
+
+
 app_name = "rpanel"
 app_title = "RPanel"
 app_publisher = "ROKCT INTELLIGENCE (PTY) LTD"

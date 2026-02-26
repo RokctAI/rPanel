@@ -34,10 +34,15 @@ def create_staging(production_website_name):
         shutil.copytree(production.site_path, staging_path, dirs_exist_ok=True)
 
         # Create staging database
-        create_staging_database(production.db_name, staging_db, production.db_user, production.db_password)
+        create_staging_database(
+            production.db_name,
+            staging_db,
+            production.db_user,
+            production.db_password)
 
         # Create Nginx config for staging
-        create_staging_nginx_config(staging_url, staging_path, production.php_version)
+        create_staging_nginx_config(
+            staging_url, staging_path, production.php_version)
 
         # Create staging environment record
         staging = frappe.get_doc({
@@ -106,8 +111,10 @@ def push_to_production(staging_name):
 
     try:
         # Create backup of production first
-        frappe.call('rpanel.hosting.doctype.site_backup.site_backup.create_backup',
-                    website_name=production.name, backup_type='Full')
+        frappe.call(
+            'rpanel.hosting.doctype.site_backup.site_backup.create_backup',
+            website_name=production.name,
+            backup_type='Full')
 
         # Sync files from staging to production
         subprocess.run([
@@ -155,7 +162,9 @@ def delete_staging(staging_name):
 def create_staging_database(prod_db, staging_db, db_user, db_password):
     """Create staging database from production"""
     # Create database
-    run_mysql_command(f"CREATE DATABASE IF NOT EXISTS {staging_db}", as_sudo=True)
+    run_mysql_command(
+        f"CREATE DATABASE IF NOT EXISTS {staging_db}",
+        as_sudo=True)
 
     # Dump production database - Secure: password hidden
     dump_file = f"/tmp/{prod_db}_staging.sql"

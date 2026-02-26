@@ -138,8 +138,10 @@ def get_chart_data(data, filters):
 
     # Calculate averages
     labels = sorted(hourly_data.keys())
-    cpu_values = [sum(hourly_data[h]['cpu']) / len(hourly_data[h]['cpu']) if hourly_data[h]['cpu'] else 0 for h in labels]
-    memory_values = [sum(hourly_data[h]['memory']) / len(hourly_data[h]['memory']) if hourly_data[h]['memory'] else 0 for h in labels]
+    cpu_values = [sum(hourly_data[h]['cpu']) / len(hourly_data[h]
+                                                   ['cpu']) if hourly_data[h]['cpu'] else 0 for h in labels]
+    memory_values = [sum(hourly_data[h]['memory']) / len(hourly_data[h]
+                                                         ['memory']) if hourly_data[h]['memory'] else 0 for h in labels]
 
     chart = {
         'data': {

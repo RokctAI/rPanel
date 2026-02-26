@@ -1,4 +1,9 @@
-import sys, requests
+# Copyright (c) 2026, Rokct Intelligence (pty) Ltd.
+# For license information, please see license.txt
+
+
+import sys
+import requests
 
 REPO = "RokctAI/rpanel"
 API_URL = f"https://api.github.com/repos/{REPO}/releases/latest"

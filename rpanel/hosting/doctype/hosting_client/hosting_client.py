@@ -13,9 +13,12 @@ class HostingClient(Document):
 
     def check_website_quota(self):
         """Check if client has exceeded website quota"""
-        website_count = frappe.db.count('Hosted Website', {'client': self.name})
+        website_count = frappe.db.count(
+            'Hosted Website', {'client': self.name})
         if website_count >= self.max_websites:
-            frappe.throw(f"Website quota exceeded. Maximum: {self.max_websites}")
+            frappe.throw(
+                f"Website quota exceeded. Maximum: {
+                    self.max_websites}")
 
     def check_storage_quota(self):
         """Check if client has exceeded storage quota"""
@@ -26,12 +29,16 @@ class HostingClient(Document):
         """, self.name)[0][0] or 0
 
         if total_storage / 1024 >= self.max_storage_gb:
-            frappe.throw(f"Storage quota exceeded. Maximum: {self.max_storage_gb} GB")
+            frappe.throw(
+                f"Storage quota exceeded. Maximum: {
+                    self.max_storage_gb} GB")
 
     def on_update(self):
         """Handle cascading suspension"""
         if self.has_value_changed("status"):
-            websites = frappe.get_all("Hosted Website", filters={"client": self.name})
+            websites = frappe.get_all(
+                "Hosted Website", filters={
+                    "client": self.name})
 
             if self.status == "Suspended":
                 for site in websites:
@@ -39,7 +46,10 @@ class HostingClient(Document):
                     if doc.status != "Suspended":
                         doc.status = "Suspended"
                         doc.save()
-                frappe.msgprint(f"Suspended {len(websites)} websites for client {self.client_name}")
+                frappe.msgprint(
+                    f"Suspended {
+                        len(websites)} websites for client {
+                        self.client_name}")
 
             elif self.status == "Active":
                 for site in websites:
@@ -47,7 +57,8 @@ class HostingClient(Document):
                     if doc.status == "Suspended":
                         doc.status = "Active"
                         doc.save()
-                frappe.msgprint(f"Re-activated {len(websites)} websites for client {self.client_name}")
+                frappe.msgprint(
+                    f"Re-activated {len(websites)} websites for client {self.client_name}")
 
 
 @frappe.whitelist()
@@ -69,13 +80,12 @@ def get_client_usage(client_name):
     """, client_name)[0][0] or 0
 
     return {
-        'success': True,
-        'usage': {
-            'websites': {'used': website_count, 'limit': client.max_websites},
-            'databases': {'used': database_count, 'limit': client.max_databases},
-            'storage_gb': {'used': round(total_storage / 1024, 2), 'limit': client.max_storage_gb}
-        }
-    }
+        'success': True, 'usage': {
+            'websites': {
+                'used': website_count, 'limit': client.max_websites}, 'databases': {
+                'used': database_count, 'limit': client.max_databases}, 'storage_gb': {
+                    'used': round(
+                        total_storage / 1024, 2), 'limit': client.max_storage_gb}}}
 
 
 @frappe.whitelist()

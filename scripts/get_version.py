@@ -1,4 +1,9 @@
-import json, sys
+# Copyright (c) 2026, Rokct Intelligence (pty) Ltd.
+# For license information, please see license.txt
+
+
+import json
+import sys
 
 
 def main():

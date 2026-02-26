@@ -28,8 +28,10 @@ class ModSecurityManager:
         Installs OWASP Core Rule Set and creates base configuration
         """
         # Create directories
-        subprocess.run(['sudo', 'mkdir', '-p', str(self.modsec_dir)], check=True)
-        subprocess.run(['sudo', 'mkdir', '-p', str(self.rules_dir)], check=True)
+        subprocess.run(
+            ['sudo', 'mkdir', '-p', str(self.modsec_dir)], check=True)
+        subprocess.run(
+            ['sudo', 'mkdir', '-p', str(self.rules_dir)], check=True)
 
         # Download OWASP Core Rule Set if not exists
         if not self.crs_dir.exists():
@@ -294,7 +296,8 @@ SecRule REQUEST_URI "@rx \\?author=[0-9]+" \\
                 continue
 
             if 'ModSecurity Web Application Firewall' in line:
-                skip_next = 2  # Skip next 2 lines (modsecurity on; modsecurity_rules_file)
+                # Skip next 2 lines (modsecurity on; modsecurity_rules_file)
+                skip_next = 2
                 continue
 
             if 'modsecurity' not in line.lower():

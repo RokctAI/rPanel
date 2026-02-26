@@ -15,12 +15,17 @@ def scan_for_malware(website_name):
     try:
         # Run ClamAV scan
         cmd = f"clamscan -r --infected --remove=no {website.site_path}"
-        result = subprocess.run(shlex.split(cmd), capture_output=True, text=True, timeout=300)
+        result = subprocess.run(
+            shlex.split(cmd),
+            capture_output=True,
+            text=True,
+            timeout=300)
 
         # Parse results
         threats_found = 0
         if 'Infected files:' in result.stdout:
-            threats_found = int(result.stdout.split('Infected files:')[1].split('\n')[0].strip())
+            threats_found = int(result.stdout.split(
+                'Infected files:')[1].split('\n')[0].strip())
 
         # Log scan results
         frappe.get_doc({
@@ -50,7 +55,8 @@ def setup_fail2ban():
     """Setup Fail2Ban for brute force protection"""
     try:
         # Check if Fail2Ban is installed
-        result = subprocess.run(['which', 'fail2ban-client'], capture_output=True)
+        result = subprocess.run(
+            ['which', 'fail2ban-client'], capture_output=True)
         if result.returncode != 0:
             return {'success': False, 'error': 'Fail2Ban not installed'}
 
@@ -99,7 +105,8 @@ bantime = 86400
 def get_fail2ban_status():
     """Get Fail2Ban status"""
     try:
-        result = subprocess.run(['fail2ban-client', 'status'], capture_output=True, text=True)
+        result = subprocess.run(
+            ['fail2ban-client', 'status'], capture_output=True, text=True)
         return {'success': True, 'status': result.stdout}
     except Exception as e:
         return {'success': False, 'error': str(e)}
@@ -131,7 +138,8 @@ def block_ip(ip_address, duration=3600):
 def unblock_ip(ip_address):
     """Unblock IP address"""
     try:
-        subprocess.run(["sudo", "ufw", "delete", "deny", "from", ip_address], check=True)
+        subprocess.run(["sudo", "ufw", "delete", "deny",
+                       "from", ip_address], check=True)
 
         frappe.get_doc({
             'doctype': 'Security Audit Log',

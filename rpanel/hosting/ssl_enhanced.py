@@ -20,7 +20,9 @@ def issue_wildcard_ssl(website_name):
         cf_api_key = settings.get('cloudflare_api_key')
 
         if not cf_api_key:
-            return {'success': False, 'error': 'Cloudflare API key not configured'}
+            return {
+                'success': False,
+                'error': 'Cloudflare API key not configured'}
 
         # Create Cloudflare credentials file
         creds_file = f"/tmp/cloudflare_{domain}.ini"
@@ -31,7 +33,10 @@ def issue_wildcard_ssl(website_name):
 
         # Issue wildcard certificate
         cmd = f"certbot certonly --dns-cloudflare --dns-cloudflare-credentials {creds_file} -d {domain} -d *.{domain} --non-interactive --agree-tos --email admin@{domain}"
-        result = subprocess.run(shlex.split(cmd), capture_output=True, text=True)
+        result = subprocess.run(
+            shlex.split(cmd),
+            capture_output=True,
+            text=True)
 
         # Clean up
         os.remove(creds_file)
@@ -120,7 +125,8 @@ def check_ssl_health(website_name):
 
                 # Parse expiry date
                 expiry_str = cert['notAfter']
-                expiry_date = datetime.strptime(expiry_str, '%b %d %H:%M:%S %Y %Z')
+                expiry_date = datetime.strptime(
+                    expiry_str, '%b %d %H:%M:%S %Y %Z')
                 days_left = (expiry_date - datetime.now()).days
 
                 # Check certificate chain
@@ -136,8 +142,10 @@ def check_ssl_health(website_name):
                     'days_left': days_left,
                     'chain_valid': chain_valid,
                     'common_name': common_name,
-                    'issuer': dict(x[0] for x in cert['issuer']).get('organizationName', 'Unknown')
-                }
+                    'issuer': dict(
+                        x[0] for x in cert['issuer']).get(
+                        'organizationName',
+                        'Unknown')}
 
     except Exception as e:
         return {'success': False, 'error': str(e)}
@@ -159,7 +167,8 @@ def renew_ssl_certificate(website_name):
             )
 
             if result.returncode == 0:
-                cert_path = f"/etc/letsencrypt/live/{website.domain}/fullchain.pem"
+                cert_path = f"/etc/letsencrypt/live/{
+                    website.domain}/fullchain.pem"
                 expiry = get_ssl_expiry_date(cert_path)
 
                 website.db_set('ssl_expiry_date', expiry)

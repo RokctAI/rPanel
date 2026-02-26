@@ -99,38 +99,33 @@ def get_summary(data, filters):
     total_checks = len(data)
     up_checks = sum(1 for d in data if d['is_up'] == 'Up')
     down_checks = total_checks - up_checks
-    uptime_percentage = (up_checks / total_checks * 100) if total_checks > 0 else 0
+    uptime_percentage = (
+        up_checks /
+        total_checks *
+        100) if total_checks > 0 else 0
 
     # Calculate average response time for successful checks
-    response_times = [d.response_time for d in data if d['is_up'] == 'Up' and d.response_time]
-    avg_response_time = sum(response_times) / len(response_times) if response_times else 0
+    response_times = [
+        d.response_time for d in data if d['is_up'] == 'Up' and d.response_time]
+    avg_response_time = sum(response_times) / \
+        len(response_times) if response_times else 0
 
-    return [
-        {
-            'value': f"{uptime_percentage:.2f}%",
-            'label': 'Uptime',
-            'indicator': 'green' if uptime_percentage >= 99 else 'orange' if uptime_percentage >= 95 else 'red',
-            'datatype': 'Data'
-        },
-        {
-            'value': up_checks,
-            'label': 'Successful Checks',
-            'indicator': 'green',
-            'datatype': 'Int'
-        },
-        {
-            'value': down_checks,
-            'label': 'Failed Checks',
-            'indicator': 'red' if down_checks > 0 else 'gray',
-            'datatype': 'Int'
-        },
-        {
-            'value': f"{avg_response_time:.2f} ms",
-            'label': 'Avg Response Time',
-            'indicator': 'blue',
-            'datatype': 'Data'
-        }
-    ]
+    return [{'value': f"{uptime_percentage:.2f}%",
+             'label': 'Uptime',
+             'indicator': 'green' if uptime_percentage >= 99 else 'orange' if uptime_percentage >= 95 else 'red',
+             'datatype': 'Data'},
+            {'value': up_checks,
+             'label': 'Successful Checks',
+             'indicator': 'green',
+             'datatype': 'Int'},
+            {'value': down_checks,
+             'label': 'Failed Checks',
+             'indicator': 'red' if down_checks > 0 else 'gray',
+             'datatype': 'Int'},
+            {'value': f"{avg_response_time:.2f} ms",
+             'label': 'Avg Response Time',
+             'indicator': 'blue',
+             'datatype': 'Data'}]
 
 
 def get_chart_data(data, filters):
@@ -153,9 +148,11 @@ def get_chart_data(data, filters):
             hourly_data[hour]['down'] += 1
 
     labels = sorted(hourly_data.keys())
-    uptime_values = [(hourly_data[h]['up'] / (hourly_data[h]['up'] + hourly_data[h]['down']) * 100)
-                     if (hourly_data[h]['up'] + hourly_data[h]['down']) > 0 else 0
-                     for h in labels]
+    uptime_values = [(hourly_data[h]['up'] /
+                      (hourly_data[h]['up'] +
+                       hourly_data[h]['down']) *
+                      100) if (hourly_data[h]['up'] +
+                               hourly_data[h]['down']) > 0 else 0 for h in labels]
 
     chart = {
         'data': {

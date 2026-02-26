@@ -76,7 +76,8 @@ def install_dependencies():
         except ImportError:
             print(f"Installing {dep}...")
             try:
-                subprocess.check_call([sys.executable, '-m', 'pip', 'install', dep])
+                subprocess.check_call(
+                    [sys.executable, '-m', 'pip', 'install', dep])
                 print(f"✓ {dep} installed successfully")
             except Exception as e:
                 print(f"✗ Failed to install {dep}: {str(e)}")
@@ -137,7 +138,8 @@ def check_and_install_system_dependencies():  # noqa: C901
 
     # Load dependencies from single source of truth
     try:
-        deps_file = os.path.join(os.path.dirname(__file__), '..', 'dependencies.json')
+        deps_file = os.path.join(os.path.dirname(
+            __file__), '..', 'dependencies.json')
         with open(deps_file, 'r') as f:
             all_deps = json.load(f)
 
@@ -148,7 +150,8 @@ def check_and_install_system_dependencies():  # noqa: C901
         return
 
     # OVERRIDE: Force correct ModSecurity package for Ubuntu 24.04
-    # This ensures we use the correct package even if dependencies.json is reverted by update
+    # This ensures we use the correct package even if dependencies.json is
+    # reverted by update
     if 'modsecurity' in dependencies:
         dependencies['modsecurity'].update({
             'check': "dpkg -l | grep -q libnginx-mod-http-modsecurity",
@@ -158,14 +161,17 @@ def check_and_install_system_dependencies():  # noqa: C901
     # Get MariaDB root password from common_site_config.json
     try:
         bench_path = frappe.utils.get_bench_path()
-        config_path = os.path.join(bench_path, 'sites', 'common_site_config.json')
+        config_path = os.path.join(
+            bench_path, 'sites', 'common_site_config.json')
 
         with open(config_path, 'r') as f:
             config = json.load(f)
 
         db_password = config.get('db_password') or config.get('root_password', '')  # noqa: F841
     except Exception as e:
-        print(f"Warning: Could not read MariaDB password from config: {str(e)}")
+        print(
+            f"Warning: Could not read MariaDB password from config: {
+                str(e)}")
         db_password = ''  # noqa: F841
 
     # Check which dependencies are missing
@@ -173,7 +179,11 @@ def check_and_install_system_dependencies():  # noqa: C901
 
     for dep_name, dep_info in dependencies.items():
         try:
-            result = subprocess.run(dep_info['check'], shell=True, capture_output=True)  # nosec B602 — commands from trusted dependencies.json
+            # nosec B602 — commands from trusted dependencies.json
+            result = subprocess.run(
+                dep_info['check'],
+                shell=True,
+                capture_output=True)
             if result.returncode != 0:
                 missing_deps.append(dep_name)
             else:
@@ -213,7 +223,8 @@ def check_and_install_system_dependencies():  # noqa: C901
                     if '|' in part:
                         pipe_parts = part.split('|')
                         # Add sudo after pipe if not present
-                        part = '|'.join([p if i == 0 else f" sudo {p.strip()}" for i, p in enumerate(pipe_parts)])
+                        part = '|'.join(
+                            [p if i == 0 else f" sudo {p.strip()}" for i, p in enumerate(pipe_parts)])
 
                     # Add sudo if not present (handling env as well)
                     if not part.startswith('sudo'):
@@ -224,17 +235,22 @@ def check_and_install_system_dependencies():  # noqa: C901
                 install_cmd = ' && '.join(sudo_parts)
 
                 print(f"Executing: {install_cmd}")
-                subprocess.run(install_cmd, shell=True, check=True)  # nosec B602 — commands from trusted dependencies.json, require shell for pipes/chains
+                # nosec B602 — commands from trusted dependencies.json, require
+                # shell for pipes/chains
+                subprocess.run(install_cmd, shell=True, check=True)
 
                 # Special handling for packages that might start apache2
                 if dep_name in ['roundcube', 'phpmyadmin']:
-                    subprocess.run(['sudo', 'systemctl', 'stop', 'apache2'], check=False)
-                    subprocess.run(['sudo', 'systemctl', 'disable', 'apache2'], check=False)
+                    subprocess.run(
+                        ['sudo', 'systemctl', 'stop', 'apache2'], check=False)
+                    subprocess.run(
+                        ['sudo', 'systemctl', 'disable', 'apache2'], check=False)
 
                 print(f"✓ {dep_name} installed successfully\n")
             except Exception as e:
                 print(f"✗ Failed to install {dep_name}: {str(e)}")
-                print(f"  You may need to install it manually: {install_cmd}\n")
+                print(
+                    f"  You may need to install it manually: {install_cmd}\n")
 
 
 def setup_security_features():
@@ -250,8 +266,12 @@ def setup_security_features():
     try:
         # Setup ModSecurity if installed
         # Check for compiled module OR Ubuntu package
-        result = subprocess.run('nginx -V 2>&1 | grep -q modsecurity', shell=True)  # nosec B602 — pipe required for version check
-        pkg_result = subprocess.run('dpkg -l | grep -q libnginx-mod-http-modsecurity', shell=True)  # nosec B602 — pipe required
+        result = subprocess.run(
+            'nginx -V 2>&1 | grep -q modsecurity',
+            shell=True)  # nosec B602 — pipe required for version check
+        pkg_result = subprocess.run(
+            'dpkg -l | grep -q libnginx-mod-http-modsecurity',
+            shell=True)  # nosec B602 — pipe required
 
         if result.returncode == 0 or pkg_result.returncode == 0:
             from rpanel.hosting.modsecurity_manager import setup_modsecurity
@@ -265,18 +285,30 @@ def setup_security_features():
     print("\n✓ System dependency installation complete")
 
     # Final check: Ensure Apache is dead and Nginx is alive
-    # This is critical because some packages (phpmyadmin/roundcube) might restart apache at the end of their install scripts
+    # This is critical because some packages (phpmyadmin/roundcube) might
+    # restart apache at the end of their install scripts
     print("\n=== Verifying Web Server Status ===")
     try:
         print("Configuring Apache for safe coexistence (Port 8080)...")
         # Change Listen 80 to Listen 8080 in ports.conf
-        subprocess.run(["sudo", "sed", "-i", "s/Listen 80/Listen 8080/g", "/etc/apache2/ports.conf"], check=False)
+        subprocess.run(["sudo",
+                        "sed",
+                        "-i",
+                        "s/Listen 80/Listen 8080/g",
+                        "/etc/apache2/ports.conf"],
+                       check=False)
         # Change <VirtualHost *:80> to <VirtualHost *:8080> in default site
-        subprocess.run(["sudo", "sed", "-i", r"s/<VirtualHost \*:80>/<VirtualHost \*:8080>/g", "/etc/apache2/sites-available/000-default.conf"], check=False)
+        subprocess.run(["sudo",
+                        "sed",
+                        "-i",
+                        r"s/<VirtualHost \*:80>/<VirtualHost \*:8080>/g",
+                        "/etc/apache2/sites-available/000-default.conf"],
+                       check=False)
 
         print("Stopping Apache2 service...")
         subprocess.run(['sudo', 'systemctl', 'stop', 'apache2'], check=False)
-        subprocess.run(['sudo', 'systemctl', 'disable', 'apache2'], check=False)
+        subprocess.run(
+            ['sudo', 'systemctl', 'disable', 'apache2'], check=False)
 
         print("Restarting Nginx service...")
         subprocess.run(['sudo', 'systemctl', 'restart', 'nginx'], check=True)

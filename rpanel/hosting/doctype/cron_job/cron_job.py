@@ -79,8 +79,7 @@ class CronJob(Document):
 
             return {
                 'success': result.returncode == 0,
-                'output': result.stdout if result.returncode == 0 else result.stderr
-            }
+                'output': result.stdout if result.returncode == 0 else result.stderr}
 
         except subprocess.TimeoutExpired:
             self.db_set('last_status', 'Failed')
@@ -120,7 +119,9 @@ class CronJob(Document):
                 """
             )
         except Exception as e:
-            frappe.log_error(f"Failed to send cron failure notification: {str(e)}")
+            frappe.log_error(
+                f"Failed to send cron failure notification: {
+                    str(e)}")
 
 
 @frappe.whitelist()
@@ -133,38 +134,26 @@ def execute_cron_job(job_name):
 @frappe.whitelist()
 def get_cron_templates():
     """Get pre-built cron job templates"""
-    return [
-        {
-            'name': 'Daily Backup',
-            'command': 'tar -czf backup-$(date +%Y%m%d).tar.gz .',
-            'schedule': '0 2 * * *',
-            'description': 'Create daily backup at 2 AM'
-        },
-        {
-            'name': 'Clear Cache',
-            'command': 'find ./cache -type f -mtime +7 -delete',
-            'schedule': '0 3 * * 0',
-            'description': 'Clear cache files older than 7 days, weekly on Sunday at 3 AM'
-        },
-        {
-            'name': 'Update WordPress',
-            'command': 'wp core update && wp plugin update --all',
-            'schedule': '0 4 * * 1',
-            'description': 'Update WordPress core and plugins, weekly on Monday at 4 AM'
-        },
-        {
-            'name': 'Database Optimization',
-            'command': 'wp db optimize',
-            'schedule': '0 5 * * *',
-            'description': 'Optimize WordPress database daily at 5 AM'
-        },
-        {
-            'name': 'Log Rotation',
-            'command': 'find ./logs -name "*.log" -mtime +30 -delete',
-            'schedule': '0 1 * * *',
-            'description': 'Delete log files older than 30 days, daily at 1 AM'
-        }
-    ]
+    return [{'name': 'Daily Backup',
+             'command': 'tar -czf backup-$(date +%Y%m%d).tar.gz .',
+             'schedule': '0 2 * * *',
+             'description': 'Create daily backup at 2 AM'},
+            {'name': 'Clear Cache',
+             'command': 'find ./cache -type f -mtime +7 -delete',
+             'schedule': '0 3 * * 0',
+             'description': 'Clear cache files older than 7 days, weekly on Sunday at 3 AM'},
+            {'name': 'Update WordPress',
+             'command': 'wp core update && wp plugin update --all',
+             'schedule': '0 4 * * 1',
+             'description': 'Update WordPress core and plugins, weekly on Monday at 4 AM'},
+            {'name': 'Database Optimization',
+             'command': 'wp db optimize',
+             'schedule': '0 5 * * *',
+             'description': 'Optimize WordPress database daily at 5 AM'},
+            {'name': 'Log Rotation',
+             'command': 'find ./logs -name "*.log" -mtime +30 -delete',
+             'schedule': '0 1 * * *',
+             'description': 'Delete log files older than 30 days, daily at 1 AM'}]
 
 
 @frappe.whitelist()
@@ -174,7 +163,8 @@ def validate_cron_expression(expression):
         cron = croniter(expression, datetime.now())
         next_runs = []
         for i in range(5):
-            next_runs.append(cron.get_next(datetime).strftime('%Y-%m-%d %H:%M:%S'))
+            next_runs.append(
+                cron.get_next(datetime).strftime('%Y-%m-%d %H:%M:%S'))
 
         return {
             'valid': True,
@@ -206,7 +196,10 @@ def execute_scheduled_cron_jobs():
             job_doc = frappe.get_doc('Cron Job', job.name)
             job_doc.execute()
         except Exception as e:
-            frappe.log_error(f"Scheduled cron job execution failed: {str(e)}", f"Cron Job: {job.name}")
+            frappe.log_error(
+                f"Scheduled cron job execution failed: {
+                    str(e)}", f"Cron Job: {
+                    job.name}")
 
 
 @frappe.whitelist()
@@ -219,8 +212,14 @@ def get_cron_jobs(website=None):
     jobs = frappe.get_all(
         'Cron Job',
         filters=filters,
-        fields=['name', 'website', 'command', 'schedule', 'last_status', 'enabled', 'description']
-    )
+        fields=[
+            'name',
+            'website',
+            'command',
+            'schedule',
+            'last_status',
+            'enabled',
+            'description'])
 
     # Format status
     for job in jobs:

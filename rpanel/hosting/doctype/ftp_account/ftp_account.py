@@ -41,7 +41,11 @@ class FTPAccount(Document):
             )
 
             # 3. Set permissions
-            subprocess.run(["chown", "-R", f"{self.username}:www-data", self.home_directory], check=True)
+            subprocess.run(["chown",
+                            "-R",
+                            f"{self.username}:www-data",
+                            self.home_directory],
+                           check=True)
             subprocess.run(["chmod", "755", self.home_directory], check=True)
 
             # 4. Add to vsftpd user list

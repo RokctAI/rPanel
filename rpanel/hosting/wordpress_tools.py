@@ -24,7 +24,8 @@ def import_wordpress(website_name, source_path):
             shutil.copytree(source_path, website.site_path, dirs_exist_ok=True)
 
         # Set permissions
-        subprocess.run(["chown", "-R", "www-data:www-data", website.site_path], check=True)
+        subprocess.run(["chown", "-R", "www-data:www-data",
+                       website.site_path], check=True)
 
         return {'success': True, 'message': 'WordPress imported'}
     except Exception as e:
@@ -58,7 +59,10 @@ def search_replace_db(website_name, search, replace):
     try:
         # Use WP-CLI if available
         cmd = f"wp search-replace '{search}' '{replace}' --path={website.site_path}"
-        result = subprocess.run(shlex.split(cmd), capture_output=True, text=True)
+        result = subprocess.run(
+            shlex.split(cmd),
+            capture_output=True,
+            text=True)
 
         if result.returncode == 0:
             return {'success': True, 'output': result.stdout}
@@ -112,14 +116,20 @@ echo "Search-replace completed via PHP Bridge\\n";
 
                     # Execute as www-data
                     cmd = f"sudo -u www-data php {script_path}"
-                    subprocess.run(shlex.split(cmd), check=True, capture_output=True)
+                    subprocess.run(
+                        shlex.split(cmd),
+                        check=True,
+                        capture_output=True)
 
-                    return {'success': True, 'message': 'Search/replace completed via PG Bridge'}
+                    return {
+                        'success': True,
+                        'message': 'Search/replace completed via PG Bridge'}
                 finally:
                     if os.path.exists(script_path):
                         os.remove(script_path)
 
-            # Legacy Fallback for MariaDB (Direct SQL for speed, assuming simple strings)
+            # Legacy Fallback for MariaDB (Direct SQL for speed, assuming
+            # simple strings)
             sql = f"""
             UPDATE wp_options SET option_value = REPLACE(option_value, '{search}', '{replace}');
             UPDATE wp_posts SET post_content = REPLACE(post_content, '{search}', '{replace}');
@@ -133,7 +143,9 @@ echo "Search-replace completed via PHP Bridge\\n";
                 password=website.db_password
             )
 
-            return {'success': True, 'message': 'Search/replace completed via Legacy SQL'}
+            return {
+                'success': True,
+                'message': 'Search/replace completed via Legacy SQL'}
     except Exception as e:
         return {'success': False, 'error': str(e)}
 
@@ -145,7 +157,10 @@ def install_wp_plugin(website_name, plugin_slug):
 
     try:
         cmd = f"wp plugin install {plugin_slug} --activate --path={website.site_path}"
-        result = subprocess.run(shlex.split(cmd), capture_output=True, text=True)
+        result = subprocess.run(
+            shlex.split(cmd),
+            capture_output=True,
+            text=True)
 
         return {'success': True, 'output': result.stdout}
     except Exception as e:
@@ -159,7 +174,10 @@ def update_wordpress(website_name):
 
     try:
         cmd = f"wp core update --path={website.site_path}"
-        result = subprocess.run(shlex.split(cmd), capture_output=True, text=True)
+        result = subprocess.run(
+            shlex.split(cmd),
+            capture_output=True,
+            text=True)
 
         return {'success': True, 'output': result.stdout}
     except Exception as e:
@@ -174,14 +192,17 @@ def get_wp_info(website_name):
     try:
         # Get WP version
         cmd = f"wp core version --path={website.site_path}"
-        version_result = subprocess.run(shlex.split(cmd), capture_output=True, text=True)
+        version_result = subprocess.run(
+            shlex.split(cmd), capture_output=True, text=True)
 
         # Get plugin list
         cmd = f"wp plugin list --format=json --path={website.site_path}"
-        plugins_result = subprocess.run(shlex.split(cmd), capture_output=True, text=True)
+        plugins_result = subprocess.run(
+            shlex.split(cmd), capture_output=True, text=True)
 
         import json
-        plugins = json.loads(plugins_result.stdout) if plugins_result.returncode == 0 else []
+        plugins = json.loads(
+            plugins_result.stdout) if plugins_result.returncode == 0 else []
 
         return {
             'success': True,

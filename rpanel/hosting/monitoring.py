@@ -22,18 +22,26 @@ def get_resource_usage(website_name, period='24h'):
         'Resource Usage Log',
         filters={
             'website': website_name,
-            'timestamp': ['>=', start_time]
-        },
-        fields=['timestamp', 'cpu_usage', 'memory_usage', 'disk_usage',
-                'bandwidth_in', 'bandwidth_out', 'request_count', 'error_count'],
-        order_by='timestamp asc'
-    )
+            'timestamp': [
+                '>=',
+                start_time]},
+        fields=[
+            'timestamp',
+            'cpu_usage',
+            'memory_usage',
+            'disk_usage',
+            'bandwidth_in',
+            'bandwidth_out',
+            'request_count',
+            'error_count'],
+        order_by='timestamp asc')
 
     # Calculate averages
     if logs:
         avg_cpu = sum(log.cpu_usage or 0 for log in logs) / len(logs)
         avg_memory = sum(log.memory_usage or 0 for log in logs) / len(logs)
-        total_bandwidth = sum((log.bandwidth_in or 0) + (log.bandwidth_out or 0) for log in logs)
+        total_bandwidth = sum((log.bandwidth_in or 0) +
+                              (log.bandwidth_out or 0) for log in logs)
         total_requests = sum(log.request_count or 0 for log in logs)
         total_errors = sum(log.error_count or 0 for log in logs)
     else:
@@ -42,14 +50,20 @@ def get_resource_usage(website_name, period='24h'):
     return {
         'logs': logs,
         'summary': {
-            'avg_cpu': round(avg_cpu, 2),
-            'avg_memory': round(avg_memory, 2),
-            'total_bandwidth': round(total_bandwidth, 2),
+            'avg_cpu': round(
+                avg_cpu,
+                2),
+            'avg_memory': round(
+                avg_memory,
+                2),
+            'total_bandwidth': round(
+                total_bandwidth,
+                2),
             'total_requests': total_requests,
             'total_errors': total_errors,
-            'error_rate': round((total_errors / total_requests * 100) if total_requests > 0 else 0, 2)
-        }
-    }
+            'error_rate': round(
+                (total_errors / total_requests * 100) if total_requests > 0 else 0,
+                2)}}
 
 
 @frappe.whitelist()
@@ -65,17 +79,23 @@ def get_uptime_stats(website_name, period='7d'):
         'Uptime Check',
         filters={
             'website': website_name,
-            'check_time': ['>=', start_time]
-        },
-        fields=['check_time', 'is_up', 'status_code', 'response_time', 'error_message'],
-        order_by='check_time asc'
-    )
+            'check_time': [
+                '>=',
+                start_time]},
+        fields=[
+            'check_time',
+            'is_up',
+            'status_code',
+            'response_time',
+            'error_message'],
+        order_by='check_time asc')
 
     # Calculate uptime percentage
     if checks:
         up_count = sum(1 for check in checks if check.is_up)
         uptime_percentage = (up_count / len(checks)) * 100
-        avg_response_time = sum(check.response_time or 0 for check in checks if check.is_up) / up_count if up_count > 0 else 0
+        avg_response_time = sum(
+            check.response_time or 0 for check in checks if check.is_up) / up_count if up_count > 0 else 0
     else:
         uptime_percentage = 0
         avg_response_time = 0
@@ -233,7 +253,10 @@ def collect_resource_metrics():
             frappe.db.commit()
 
         except Exception as e:
-            frappe.log_error(f"Resource collection failed for {website.name}: {str(e)}")
+            frappe.log_error(
+                f"Resource collection failed for {
+                    website.name}: {
+                    str(e)}")
 
 
 def check_uptime():
@@ -253,7 +276,8 @@ def check_uptime():
 
             # Make request
             start_time = time.time()
-            response = requests.get(url, timeout=10, verify=False)  # nosec B501 — internal health check, certs are self-managed
+            # nosec B501 — internal health check, certs are self-managed
+            response = requests.get(url, timeout=10, verify=False)
             response_time = (time.time() - start_time) * 1000  # Convert to ms
 
             # Create uptime check
@@ -295,11 +319,13 @@ def get_website_metrics(website):
         # Get Nginx access log stats for requests
         access_log = f"/var/log/nginx/{website.domain}_access.log"
         if os.path.exists(access_log):
-            # Count requests in last 5 minutes (Avoid shell=True by running tail then processing in Python)
+            # Count requests in last 5 minutes (Avoid shell=True by running
+            # tail then processing in Python)
             cmd = ["tail", "-n", "1000", access_log]
             result = subprocess.run(cmd, capture_output=True, text=True)
             if result.returncode == 0:
-                metrics['request_count'] = len(result.stdout.strip().split('\n')) if result.stdout.strip() else 0
+                metrics['request_count'] = len(
+                    result.stdout.strip().split('\n')) if result.stdout.strip() else 0
             else:
                 metrics['request_count'] = 0
 
@@ -309,7 +335,8 @@ def get_website_metrics(website):
             cmd = ["tail", "-n", "100", error_log]
             result = subprocess.run(cmd, capture_output=True, text=True)
             if result.returncode == 0:
-                metrics['error_count'] = len(result.stdout.strip().split('\n')) if result.stdout.strip() else 0
+                metrics['error_count'] = len(
+                    result.stdout.strip().split('\n')) if result.stdout.strip() else 0
             else:
                 metrics['error_count'] = 0
 

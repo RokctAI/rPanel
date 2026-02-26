@@ -46,7 +46,8 @@ def get_server_health_dashboard():
 
         # Calculate utilization percentage
         if server.max_websites > 0:
-            server['utilization'] = round((server.current_websites / server.max_websites) * 100, 1)
+            server['utilization'] = round(
+                (server.current_websites / server.max_websites) * 100, 1)
         else:
             server['utilization'] = 0
 
@@ -80,8 +81,10 @@ def get_server_health_dashboard():
     # Calculate overall utilization
     if dashboard_data['summary']['total_capacity'] > 0:
         dashboard_data['summary']['overall_utilization'] = round(
-            (dashboard_data['summary']['total_websites'] / dashboard_data['summary']['total_capacity']) * 100, 1
-        )
+            (dashboard_data['summary']['total_websites'] /
+             dashboard_data['summary']['total_capacity']) *
+            100,
+            1)
     else:
         dashboard_data['summary']['overall_utilization'] = 0
 

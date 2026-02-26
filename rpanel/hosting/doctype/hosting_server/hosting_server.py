@@ -20,7 +20,8 @@ def test_connection(server_name):
 
     try:
         client = get_ssh_client(server)
-        stdin, stdout, stderr = client.exec_command('echo "Connection successful"')
+        stdin, stdout, stderr = client.exec_command(
+            'echo "Connection successful"')
         stdout.read().decode()
         client.close()
 
@@ -61,15 +62,18 @@ def get_server_resources(server_name):
         client = get_ssh_client(server)
 
         # CPU usage
-        stdin, stdout, stderr = client.exec_command("top -bn1 | grep 'Cpu(s)' | awk '{print $2}'")
+        stdin, stdout, stderr = client.exec_command(
+            "top -bn1 | grep 'Cpu(s)' | awk '{print $2}'")
         cpu_usage = stdout.read().decode().strip()
 
         # Memory usage
-        stdin, stdout, stderr = client.exec_command("free -m | awk 'NR==2{printf \"%.2f\", $3*100/$2 }'")
+        stdin, stdout, stderr = client.exec_command(
+            "free -m | awk 'NR==2{printf \"%.2f\", $3*100/$2 }'")
         memory_usage = stdout.read().decode().strip()
 
         # Disk usage
-        stdin, stdout, stderr = client.exec_command("df -h / | awk 'NR==2{print $5}'")
+        stdin, stdout, stderr = client.exec_command(
+            "df -h / | awk 'NR==2{print $5}'")
         disk_usage = stdout.read().decode().strip()
 
         client.close()
@@ -106,7 +110,8 @@ def deploy_website_to_server(website_name, server_name):
         local_path = website.site_path
         remote_path = f"{server.ssh_username}@{server.server_ip}:/var/www/{website.domain}/"
 
-        rsync_cmd = f"rsync -avz -e 'ssh -p {server.ssh_port}' {local_path}/ {remote_path}"
+        rsync_cmd = f"rsync -avz -e 'ssh -p {
+            server.ssh_port}' {local_path}/ {remote_path}"
         subprocess.run(shlex.split(rsync_cmd), check=True)
 
         client.close()
@@ -115,7 +120,9 @@ def deploy_website_to_server(website_name, server_name):
         server.db_set('current_websites', server.current_websites + 1)
         frappe.db.commit()
 
-        return {'success': True, 'message': f'Website deployed to {server_name}'}
+        return {
+            'success': True,
+            'message': f'Website deployed to {server_name}'}
     except Exception as e:
         return {'success': False, 'error': str(e)}
 
@@ -140,7 +147,8 @@ def get_optimal_server(group='Production'):
 def get_ssh_client(server):
     """Get SSH client for server"""
     client = paramiko.SSHClient()
-    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())  # nosec B507 — managed hosting: servers are provisioned programmatically
+    # nosec B507 — managed hosting: servers are provisioned programmatically
+    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
     if server.ssh_key:
         # Use SSH key

@@ -26,7 +26,8 @@ class DNSZone(Document):
         cf_email = settings.get('cloudflare_email')
 
         if not cf_api_key or not cf_email:
-            frappe.throw("Cloudflare API credentials not configured in Hosting Settings")
+            frappe.throw(
+                "Cloudflare API credentials not configured in Hosting Settings")
 
         # Get zone ID
         zone_id = self.get_cloudflare_zone_id(cf_api_key, cf_email)
@@ -156,7 +157,14 @@ class DNSZone(Document):
 
 
 @frappe.whitelist()
-def create_dns_record(zone_name, record_type, name, value, ttl=3600, priority=None, proxied=False):
+def create_dns_record(
+        zone_name,
+        record_type,
+        name,
+        value,
+        ttl=3600,
+        priority=None,
+        proxied=False):
     """Create a new DNS record"""
     zone = frappe.get_doc('DNS Zone', zone_name)
 

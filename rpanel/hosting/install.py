@@ -59,7 +59,8 @@ def after_install():
 
     # Create default alert templates
     try:
-        frappe.get_attr('rpanel.hosting.doctype.alert_template.alert_template.create_default_templates')()
+        frappe.get_attr(
+            'rpanel.hosting.doctype.alert_template.alert_template.create_default_templates')()
         print("✓ Created default alert templates")
     except Exception as e:
         print(f"Note: Could not create default templates: {str(e)}")

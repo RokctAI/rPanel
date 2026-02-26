@@ -19,7 +19,10 @@ class BackupEncryptionManager:
         self.gpg_home = os.path.expanduser('~/.gnupg')
         self.gpg = gnupg.GPG(gnupghome=self.gpg_home)
 
-    def generate_encryption_key(self, email="backup@rpanel.local", name="RPanel Backup"):
+    def generate_encryption_key(
+            self,
+            email="backup@rpanel.local",
+            name="RPanel Backup"):
         """
         Generate a new GPG key pair for backup encryption
 
@@ -46,7 +49,8 @@ class BackupEncryptionManager:
 
         # Get key details
         keys = self.gpg.list_keys()
-        key_info = next((k for k in keys if k['fingerprint'] == str(key)), None)
+        key_info = next(
+            (k for k in keys if k['fingerprint'] == str(key)), None)
 
         if not key_info:
             frappe.throw("Generated key not found")
@@ -83,7 +87,8 @@ class BackupEncryptionManager:
         fingerprint = settings.encryption_key_fingerprint
 
         if not fingerprint:
-            frappe.throw("No encryption key configured. Please generate a key first.")
+            frappe.throw(
+                "No encryption key configured. Please generate a key first.")
 
         # Set output path
         if not output_path:

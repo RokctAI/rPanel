@@ -1,3 +1,7 @@
+# Copyright (c) 2026, Rokct Intelligence (pty) Ltd.
+# For license information, please see license.txt
+
+
 import subprocess
 import os
 import re
@@ -15,7 +19,8 @@ class ServiceIntelligence:
         """Detect installed PostgreSQL major version"""
         try:
             # Try psql first
-            result = subprocess.run(['psql', '--version'], capture_output=True, text=True, check=True)
+            result = subprocess.run(
+                ['psql', '--version'], capture_output=True, text=True, check=True)
             # Extract first number (e.g. "psql (PostgreSQL) 15.10" -> "15")
             match = re.search(r'\(PostgreSQL\)\s+([0-9]+)', result.stdout)
             if match:
@@ -26,7 +31,8 @@ class ServiceIntelligence:
         # Fallback: check /etc/postgresql directory
         try:
             if os.path.exists('/etc/postgresql'):
-                versions = [d for d in os.listdir('/etc/postgresql') if d.isdigit()]
+                versions = [d for d in os.listdir(
+                    '/etc/postgresql') if d.isdigit()]
                 if versions:
                     return sorted(versions, reverse=True)[0]
         except Exception:
@@ -41,8 +47,13 @@ class ServiceIntelligence:
         try:
             if os.path.exists('/etc/php'):
                 # Look for directories like 8.1, 8.2, 8.3 in /etc/php
-                versions = [d for d in os.listdir('/etc/php')
-                            if re.match(r'^[0-9]\.[0-9]$', d) and os.path.isdir(os.path.join('/etc/php', d))]
+                versions = [
+                    d for d in os.listdir('/etc/php') if re.match(
+                        r'^[0-9]\.[0-9]$',
+                        d) and os.path.isdir(
+                        os.path.join(
+                            '/etc/php',
+                            d))]
         except Exception:
             pass
         return sorted(versions, reverse=True)

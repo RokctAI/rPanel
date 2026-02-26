@@ -55,8 +55,14 @@ def execute(filters=None):
     data = frappe.get_all(
         'Service Version',
         filters=filters or {},
-        fields=['name as service_name', 'service_type', 'server', 'current_version', 'latest_version', 'update_available', 'last_checked'],
-        order_by='update_available desc, service_type asc'
-    )
+        fields=[
+            'name as service_name',
+            'service_type',
+            'server',
+            'current_version',
+            'latest_version',
+            'update_available',
+            'last_checked'],
+        order_by='update_available desc, service_type asc')
 
     return columns, data
