@@ -11,6 +11,17 @@ class TestHostedWebsite(unittest.TestCase):
     def setUp(self):
         # We simulate a document. In a real bench environment we might use frappe.get_doc,
         # but for unit testing controller logic, we can instantiate and mock.
+        
+        # HACK: Mock get_meta BEFORE instantiation to prevent DocType lookup failures in unit tests
+        self.patcher_meta = patch('frappe.get_meta')
+        self.mock_meta = self.patcher_meta.start()
+        
+        # Configure the mock meta object
+        meta_obj = MagicMock()
+        meta_obj._table_doctypes = []
+        meta_obj.get_field = lambda x: MagicMock()
+        self.mock_meta.return_value = meta_obj
+
         # Instantiate with dict to avoid DB lookup (init as new doc)
         self.doc = HostedWebsite({
             "doctype": "Hosted Website",
@@ -38,6 +49,9 @@ class TestHostedWebsite(unittest.TestCase):
         self.doc.check_client_quota = MagicMock()
         self.doc.load_from_db = MagicMock()
         self.doc.reload = MagicMock()
+
+    def tearDown(self):
+        self.patcher_meta.stop()
 
     @patch('rpanel.hosting.doctype.hosted_website.hosted_website.SystemUserManager')
     @patch('rpanel.hosting.doctype.hosted_website.hosted_website.PHPFPMManager')
