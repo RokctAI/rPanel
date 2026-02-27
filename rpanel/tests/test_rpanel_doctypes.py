@@ -11,11 +11,12 @@ class TestHostedWebsite(unittest.TestCase):
     def setUp(self):
         # We simulate a document. In a real bench environment we might use frappe.get_doc,
         # but for unit testing controller logic, we can instantiate and mock.
-        
-        # HACK: Mock get_meta BEFORE instantiation to prevent DocType lookup failures in unit tests
+
+        # HACK: Mock get_meta BEFORE instantiation to prevent DocType lookup
+        # failures in unit tests
         self.patcher_meta = patch('frappe.get_meta')
         self.mock_meta = self.patcher_meta.start()
-        
+
         # Configure the mock meta object
         meta_obj = MagicMock()
         meta_obj._table_doctypes = []
