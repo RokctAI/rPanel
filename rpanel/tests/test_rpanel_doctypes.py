@@ -100,7 +100,7 @@ class TestHostedWebsite(unittest.TestCase):
         # We need to mock install_wordpress separately to avoid those specific
         # calls if they are complex
         with patch.object(self.doc, 'install_wordpress') as mock_install, \
-             patch('frappe.log_error') as mock_log_error:
+                patch('frappe.log_error') as mock_log_error:
             self.doc.provision_site()
 
             # Verify interactions
