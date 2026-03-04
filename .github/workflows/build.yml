@@ -113,13 +113,16 @@ jobs:
       - name: Checkout Dockerfile
         uses: actions/checkout@v4
         with:
-           sparse-checkout: 'rpanel/Dockerfile'
+           sparse-checkout: 'Dockerfile'
 
       - name: Download Apps Artifact
         uses: actions/download-artifact@v4
         with:
           name: frappe-apps-bundle
           path: docker-context/apps
+
+      - name: Prepare Docker Context
+        run: cp Dockerfile docker-context/Dockerfile
 
       - name: Log in to GHCR
         uses: docker/login-action@v2
@@ -132,7 +135,7 @@ jobs:
         uses: docker/build-push-action@v4
         with:
           context: docker-context
-          file: rpanel/Dockerfile
+          file: docker-context/Dockerfile
           push: true
           # Pushing to the Monorepo (Private) namespace to keep the image private
           tags: ghcr.io/rokctai/monorepo/rpanel:latest
