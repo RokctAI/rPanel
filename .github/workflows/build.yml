@@ -146,6 +146,10 @@ jobs:
           # Exclude the docker-context folder itself to avoid recursion
           rsync -a --exclude 'docker-context' . ./docker-context/current_repo/
 
+      - name: Detect Runner OS Version
+        id: os-version
+        run: echo "version=$(lsb_release -rs)" >> $GITHUB_OUTPUT
+
       - name: Build and Push
         uses: docker/build-push-action@v4
         with:
