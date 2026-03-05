@@ -120,8 +120,11 @@ RUN service redis-server start && service postgresql start && \
     echo "Applying Monorepo Overrides to Control..."; \
     cp -rf /home/frappe/monorepo_overrides/control/. apps/control/; \
     fi; \
-    bench --site platform.rokct.ai install-app control; \
-    fi'
+    else \
+    echo "Installing Control Panel via HTTPS (Token-based)..."; \
+    bench get-app https://x-access-token:${GITHUB_TOKEN}@github.com/RokctAI/control.git --resolve-deps --skip-assets; \
+    fi; \
+    bench --site platform.rokct.ai install-app control'
 
 # Stage Monorepo Overrides for Install Stack
 USER frappe

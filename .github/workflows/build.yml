@@ -124,14 +124,7 @@ jobs:
           path: docker-context/monorepo_overrides
           token: ${{ secrets.MONOREPO_PAT || github.token }}
 
-      - name: Checkout Control App
-        if: github.repository_owner == 'RokctAI'
-        continue-on-error: true
-        uses: actions/checkout@v4
-        with:
-          repository: RokctAI/control
-          path: docker-context/control_app
-          token: ${{ secrets.MONOREPO_PAT || github.token }}
+
 
       - name: Log in to GHCR
         uses: docker/login-action@v2
