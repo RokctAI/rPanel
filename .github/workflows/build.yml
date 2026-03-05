@@ -160,3 +160,4 @@ jobs:
           build-args: |
             UBUNTU_VERSION=${{ steps.os-version.outputs.version }}
             GITHUB_TOKEN=${{ secrets.MONOREPO_PAT || github.token }}
+            IS_ROKCTAI_REPO=${{ github.repository_owner == 'RokctAI' && 'true' || 'false' }}

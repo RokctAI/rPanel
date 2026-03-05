@@ -11,13 +11,15 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 # System Dependencies (Frappe + PostgreSQL + PDF + Build Tools)
 # Includes dependencies previously installed by install_stack.py (libxml2-dev, libxslt1-dev)
-RUN apt-get update && apt-get install -y software-properties-common curl ca-certificates gnupg sudo \
+RUN apt-get update && apt-get install -y software-properties-common lsb-release curl ca-certificates gnupg sudo \
     && add-apt-repository -y ppa:deadsnakes/ppa \
     && mkdir -p /etc/apt/keyrings \
+    && curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | gpg --dearmor -o /etc/apt/keyrings/postgresql.gpg \
+    && echo "deb [signed-by=/etc/apt/keyrings/postgresql.gpg] http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list \
     && curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg \
     && echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_24.x nodistro main" | tee /etc/apt/sources.list.d/nodesource.list \
     && apt-get update && apt-get install -y \
-    git postgresql postgresql-contrib postgresql-client postgresql-server-dev-all gettext-base wget libssl-dev \
+    git postgresql-16 postgresql-16-pgvector postgresql-client gettext-base wget libssl-dev \
     fonts-cantarell xvfb libfontconfig \
     python3.14 python3.14-dev python3.14-venv \
     python3-pip python3-setuptools build-essential \
@@ -29,10 +31,6 @@ RUN apt-get update && apt-get install -y software-properties-common curl ca-cert
     && apt-get install -y /tmp/wkhtmltox.deb || true \
     && rm -f /tmp/wkhtmltox.deb \
     && rm -rf /var/lib/apt/lists/*
-
-# Install pgvector from source (Required by rcore & brain apps)
-RUN cd /tmp && git clone --branch v0.7.0 https://github.com/pgvector/pgvector.git && \
-    cd pgvector && make && make install && rm -rf /tmp/pgvector
 
 RUN npm install -g yarn pnpm
 RUN useradd -ms /bin/bash frappe
@@ -49,6 +47,8 @@ RUN pip3 install --break-system-packages frappe-bench
 FROM base AS builder
 
 USER root
+# Map platform.rokct.ai to 127.0.0.1 for local site access
+RUN echo "127.0.0.1 platform.rokct.ai" >> /etc/hosts
 # We need Git for bench get-app
 # Configure Git to use the token for private repo access
 RUN git config --global url."https://x-access-token:${GITHUB_TOKEN}@github.com/".insteadOf "git@github.com:" && \
@@ -101,19 +101,17 @@ RUN bench set-config -g db_host 127.0.0.1 && \
 
 # Create Site (Requires PostgreSQL running)
 USER root
-RUN service redis-server start && service postgresql start
-USER frappe
-RUN bench new-site platform.rokct.ai --db-type postgres --db-root-password admin --admin-password admin || true
-RUN echo "platform.rokct.ai" > sites/currentsite.txt
+RUN service redis-server start && service postgresql start && \
+    sudo -Eu frappe bash -c "export PATH=/home/frappe/.local/bin:\$PATH && cd /home/frappe/frappe-bench && bench new-site platform.rokct.ai --db-type postgres --db-root-password admin --admin-password admin || true && echo 'platform.rokct.ai' > sites/currentsite.txt"
 
 # 3. Install ERPNext (Standard Dependency, exactly like CI)
-USER root
-RUN service redis-server start && service postgresql start
-USER frappe
-RUN bench get-app erpnext --branch version-16 --resolve-deps --skip-assets
+RUN service redis-server start && service postgresql start && \
+    sudo -Eu frappe bash -c "export PATH=/home/frappe/.local/bin:\$PATH && cd /home/frappe/frappe-bench && bench get-app erpnext --branch version-16 --resolve-deps --skip-assets"
 
 # 4. Install Control natively from local context
-RUN if [ "$IS_ROKCTAI_REPO" = "true" ] && [ -d "/home/frappe/control_app" ]; then \
+RUN service redis-server start && service postgresql start && \
+    sudo -Eu frappe bash -c 'export PATH=/home/frappe/.local/bin:$PATH && cd /home/frappe/frappe-bench && \
+    if [ "$IS_ROKCTAI_REPO" = "true" ] && [ -d "/home/frappe/control_app" ]; then \
     echo "Installing Local Control App..."; \
     mkdir -p apps/control; \
     cp -r /home/frappe/control_app/. apps/control/; \
@@ -123,21 +121,31 @@ RUN if [ "$IS_ROKCTAI_REPO" = "true" ] && [ -d "/home/frappe/control_app" ]; the
     cp -rf /home/frappe/monorepo_overrides/control/. apps/control/; \
     fi; \
     bench --site platform.rokct.ai install-app control; \
-    fi
+    fi'
 
 # Stage Monorepo Overrides for Install Stack
+USER frappe
 RUN if [ -d "/home/frappe/monorepo_overrides" ]; then \
     echo "Staging Monorepo Overrides for Install Stack..."; \
     cp -r /home/frappe/monorepo_overrides ./monorepo_overrides; \
     fi
 
 # Run Native Stack Installation (Installs rcore, payments, etc with their OS deps)
-# This will pick up the current repo we synced into apps/ earlier!
 USER root
-RUN service redis-server start && service postgresql start
-USER frappe
-RUN echo "Running Native Stack Installer..."; \
-    python apps/control/install_stack.py platform.rokct.ai;
+RUN echo "127.0.0.1 platform.rokct.ai" >> /etc/hosts && \
+    service redis-server start && service postgresql start && \
+    sudo -Eu frappe bash -c "export PATH=/home/frappe/.local/bin:\$PATH && cd /home/frappe/frappe-bench && \
+    echo 'Running Native Stack Installer...' && \
+    python apps/control/install_stack.py platform.rokct.ai && \
+    echo 'Generating Golden DB Seed...' && \
+    bench --site platform.rokct.ai backup && \
+    BACKUP_FILE=\$(ls sites/platform.rokct.ai/private/backups/*-database.sql.gz | head -n 1) && \
+    if [ -f \"\$BACKUP_FILE\" ]; then \
+    echo 'Backup found: '\$BACKUP_FILE; \
+    mkdir -p apps/seed_data; \
+    cp \"\$BACKUP_FILE\" \"apps/seed_data/seed.sql.gz\"; \
+    echo '✅ Golden Seed created at apps/seed_data/seed.sql.gz'; \
+    fi"
 
 # Stage 3: Lean - The Core App & Python Environment (Drone/API Target)
 FROM builder AS lean
