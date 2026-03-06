@@ -373,9 +373,9 @@ fresh)
     echo -e "${GREEN}CI detected: Forcing 4GB swap for asset compilation stability...${NC}"
     # Turn off existing swap to avoid "Text file busy"
     swapoff /swapfile >>"$INSTALL_LOG" 2>&1 || true
-    fallocate -l 4G /swapfile || dd if=/dev/zero of=/swapfile bs=1M count=4096
-    chmod 600 /swapfile
-    mkswap /swapfile
+    { fallocate -l 4G /swapfile || dd if=/dev/zero of=/swapfile bs=1M count=4096; } || true
+    chmod 600 /swapfile || true
+    mkswap /swapfile || true
     swapon /swapfile || true
   else
     setup_swap
