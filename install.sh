@@ -169,7 +169,7 @@ EOF
 
   # Install Yarn globally and link it
   run_quiet "Installing Yarn" npm install -g yarn
-  ln -sf /usr/local/bin/yarn /usr/bin/yarn >>"$INSTALL_LOG" 2>&1 || true
+  [ -f /usr/bin/yarn ] && ln -sf /usr/bin/yarn /usr/local/bin/yarn >>"$INSTALL_LOG" 2>&1 || true
 
   # Bypass strict Node version checks in Yarn during build
   run_quiet "Configuring Yarn global policy" yarn config set ignore-engines true -g
