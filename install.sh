@@ -266,13 +266,13 @@ bind-address = 127.0.0.1
 skip-networking = 0
 local-infile = 0
 EOF
-  run_quiet "Restarting MariaDB" systemctl restart mariadb
+  run_quiet "Restarting MariaDB" bash -c "systemctl restart mariadb || service mariadb restart || true"
 }
 
 # Helper to configure PostgreSQL (only for fresh mode)
 configure_postgresql() {
   # Ensure PostgreSQL is started and enabled
-  run_quiet "Starting PostgreSQL" systemctl start postgresql
+  run_quiet "Starting PostgreSQL" bash -c "systemctl start postgresql || service postgresql start || true"
 
   # Wait for PostgreSQL socket to be ready (critical for CI)
   echo -n -e "${BLUE}  - Waiting for PostgreSQL to be ready... ${NC}"
@@ -306,7 +306,7 @@ configure_postgresql() {
 
   if [ -f "$PG_CONF" ]; then
     run_quiet "Configuring authentication policy (md5)" bash -c "sed -i '/^local/s/peer/md5/' '$PG_CONF' && sed -i '/^host/s/ident/md5/' '$PG_CONF'"
-    run_quiet "Applying PostgreSQL configuration" systemctl restart postgresql
+    run_quiet "Applying PostgreSQL configuration" bash -c "systemctl restart postgresql || service postgresql restart || true"
   else
     echo -e "${RED}Warning: Could not find PostgreSQL config at $PG_CONF${NC}"
   fi
@@ -442,10 +442,10 @@ echo -e "${GREEN}Configuring production services...${NC}"
 
 # 1. Ensure production prerequisites are ready (nginx + fail2ban + supervisor)
 run_quiet "Installing Nginx" apt-get install -y -qq -o=Dpkg::Use-Pty=0 nginx
-run_quiet "Starting Nginx" systemctl start nginx
+run_quiet "Starting Nginx" bash -c "systemctl start nginx || service nginx start || true"
 run_quiet "Installing fail2ban" apt-get install -y -qq -o=Dpkg::Use-Pty=0 fail2ban
 run_quiet "Installing Supervisor" apt-get install -y -qq -o=Dpkg::Use-Pty=0 supervisor
-run_quiet "Starting Supervisor" systemctl restart supervisor
+run_quiet "Starting Supervisor" bash -c "systemctl restart supervisor || service supervisor restart || true"
 
 # 2. THE CI MASTER FIX: Login shell with explicit PYTHONPATH
 # NON-FATAL: bench setup production may fail on 'systemctl reload nginx' in CI.
