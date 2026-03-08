@@ -9,7 +9,7 @@ with open("requirements.txt") as f:
 
 setup(
     name="rpanel",
-    version="1.6.10",
+    version="1.6.11",
     description="Professional Web Hosting Control Panel for Frappe",
     author="Rokct Holdings",
     author_email="admin@rokct.ai",
