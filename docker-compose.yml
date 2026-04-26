@@ -1,7 +1,11 @@
 version: '3.8'
 
+# RokctAI: Control Hub (Master VPS)
+# Manages SSL, Routing, and Shared Trial Pool
+
 services:
   db:
+    # Shared Database for Trial Tenants & Control Logic
     build:
       context: .
       dockerfile: postgres.Dockerfile
@@ -9,7 +13,7 @@ services:
       - POSTGRES_PASSWORD=${DB_PASSWORD:-admin}
       - POSTGRES_USER=postgres
     volumes:
-      - rpanel-db-data:/var/lib/postgresql/data
+      - control-db-data:/var/lib/postgresql/data
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -U postgres" ]
       interval: 10s
@@ -19,9 +23,10 @@ services:
   redis:
     image: redis:7-alpine
     volumes:
-      - rpanel-redis-data:/data
+      - control-redis-data:/data
 
   app:
+    # The Orchestrator (Full Stage: Nginx + Exim + Bench)
     build:
       context: .
       dockerfile: Dockerfile
@@ -32,10 +37,10 @@ services:
       - DB_ROOT_PASSWORD=${DB_PASSWORD:-admin}
       - ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin}
     volumes:
-      - rpanel-sites:/home/frappe/frappe-bench/sites
-      - rpanel-logs:/home/frappe/frappe-bench/logs
-      - /var/www:/var/www # Map for customer sites management
-      - /etc/nginx/conf.d:/etc/nginx/conf.d # Map to manage host Nginx
+      - control-sites:/home/frappe/frappe-bench/sites
+      - control-logs:/home/frappe/frappe-bench/logs
+      - /var/www:/var/www # Host path for customer sites/assets
+      - /etc/nginx/conf.d:/etc/nginx/conf.d # Manage Host Nginx routing
     depends_on:
       db:
         condition: service_healthy
@@ -47,7 +52,7 @@ services:
       - "8000:8000"
 
 volumes:
-  rpanel-db-data:
-  rpanel-redis-data:
-  rpanel-sites:
-  rpanel-logs:
+  control-db-data:
+  control-redis-data:
+  control-sites:
+  control-logs:

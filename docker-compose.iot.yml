@@ -1,5 +1,8 @@
 version: '3.8'
 
+# RokctAI: IoT/Edge Spoke
+# Optimized for low-RAM devices (Drones/Sensors)
+
 services:
   db:
     build:
@@ -9,7 +12,7 @@ services:
       - POSTGRES_PASSWORD=${DB_PASSWORD:-admin}
       - POSTGRES_USER=postgres
     volumes:
-      - rpanel-iot-db-data:/var/lib/postgresql/data
+      - iot-db-data:/var/lib/postgresql/data
     deploy:
       resources:
         limits:
@@ -27,7 +30,7 @@ services:
         limits:
           memory: 64M
     volumes:
-      - rpanel-iot-redis-data:/data
+      - iot-redis-data:/data
 
   app:
     build:
@@ -40,7 +43,7 @@ services:
       - DB_ROOT_PASSWORD=${DB_PASSWORD:-admin}
       - ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin}
     volumes:
-      - rpanel-iot-sites:/home/frappe/frappe-bench/sites
+      - iot-sites:/home/frappe/frappe-bench/sites
     depends_on:
       db:
         condition: service_healthy
@@ -49,9 +52,9 @@ services:
     deploy:
       resources:
         limits:
-          memory: 1G # Reserve more for AI logic but save on Web/Node overhead
+          memory: 1G # Reserve for AI processing but skip web overhead
 
 volumes:
-  rpanel-iot-db-data:
-  rpanel-iot-redis-data:
-  rpanel-iot-sites:
+  iot-db-data:
+  iot-redis-data:
+  iot-sites:
