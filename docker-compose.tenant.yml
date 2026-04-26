@@ -34,7 +34,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-      target: lean
+      target: tenant
     environment:
       - MODE=api
       - SITE_NAME=${SITE_NAME}
