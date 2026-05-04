@@ -1,10 +1,12 @@
 #!/bin/bash
 set -e
+set -x
 
 # --- Environment Injection is now handled inside setup_site to ensure bench context exists ---
 
 # Function to setup the site based on MODE
 setup_site() {
+  echo "🚀 Starting RPanel setup..."
   # 0. First-Boot Volume Seeding
   # When a named volume is mounted over /sites, it shadows the baked site.
   # If the volume is empty, seed it from the image-baked copy.
@@ -36,7 +38,7 @@ setup_site() {
       if [ -n "$INSTALL_APPS" ]; then
         echo "📦 Installing additional apps for renamed site: $INSTALL_APPS"
         for app in $INSTALL_APPS; do
-          bench --site "$SITE_NAME" install-app "$app" || echo "⚠️ Failed to install $app (might already be installed)"
+          bench --site "$SITE_NAME" install-app "$app" --force || echo "⚠️ Failed to install $app (might already be installed)"
         done
       fi
     else
@@ -44,7 +46,16 @@ setup_site() {
       # 1. Database Connection Check (Retry logic for portable spokes)
       if [ -n "$DB_HOST" ]; then
         echo "⏳ Waiting for Database at $DB_HOST..."
-        until nc -z "$DB_HOST" "${DB_PORT:-5432}"; do sleep 1; done
+        MAX_TRIES=60
+        COUNT=0
+        until nc -z "$DB_HOST" "${DB_PORT:-5432}"; do
+          COUNT=$((COUNT + 1))
+          if [ $COUNT -ge $MAX_TRIES ]; then
+            echo "❌ Database at $DB_HOST unreachable after $MAX_TRIES seconds. Exiting."
+            exit 1
+          fi
+          sleep 1
+        done
       fi
 
       # 2. Base Installation / Restoration
@@ -74,7 +85,8 @@ setup_site() {
         bench new-site "$SITE_NAME" \
           --admin-password "${ADMIN_PASSWORD:-admin}" \
           --db-root-password "${DB_ROOT_PASSWORD:-admin}" \
-          "${INSTALL_APP_FLAGS[@]}"
+          "${INSTALL_APP_FLAGS[@]}" \
+          --force
       fi
     fi
 
@@ -116,7 +128,7 @@ start_services() {
     if [ "$(id -u)" = "0" ]; then
       service exim4 start || true
       nginx -g 'daemon off;' &
-      exec su-exec frappe bench start
+      exec sudo -u frappe bench start
     else
       exec bench start
     fi
