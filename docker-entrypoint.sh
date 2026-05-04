@@ -6,6 +6,7 @@ set -x
 
 # Function to setup the site based on MODE
 setup_site() {
+  echo "🚀 Starting RPanel setup..."
   # 0. First-Boot Volume Seeding
   # When a named volume is mounted over /sites, it shadows the baked site.
   # If the volume is empty, seed it from the image-baked copy.
@@ -37,7 +38,7 @@ setup_site() {
       if [ -n "$INSTALL_APPS" ]; then
         echo "📦 Installing additional apps for renamed site: $INSTALL_APPS"
         for app in $INSTALL_APPS; do
-          bench --site "$SITE_NAME" install-app "$app" || echo "⚠️ Failed to install $app (might already be installed)"
+          bench --site "$SITE_NAME" install-app "$app" --force || echo "⚠️ Failed to install $app (might already be installed)"
         done
       fi
     else
@@ -127,7 +128,7 @@ start_services() {
     if [ "$(id -u)" = "0" ]; then
       service exim4 start || true
       nginx -g 'daemon off;' &
-      exec su-exec frappe bench start
+      exec sudo -u frappe bench start
     else
       exec bench start
     fi
