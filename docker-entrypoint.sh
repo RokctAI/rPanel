@@ -2,37 +2,42 @@
 set -e
 set -x
 
+step() {
+  printf "  - %s... " "$1"
+}
+step_done() { echo "✓ DONE"; }
+step_fail() { echo "✗ FAILED: $1"; }
+
 # --- Environment Injection is now handled inside setup_site to ensure bench context exists ---
 
 # Function to setup the site based on MODE
 setup_site() {
-  echo "🚀 Starting RPanel setup..."
+  echo "🚀 RPanel entrypoint starting (MODE=$MODE SITE=$SITE_NAME)..."
+
   # 0. First-Boot Volume Seeding
   # When a named volume is mounted over /sites, it shadows the baked site.
   # If the volume is empty, seed it from the image-baked copy.
   IMAGE_BAKED_SITES="/home/frappe/frappe-bench-image-sites"
   if [ -z "$(ls -A sites/ 2>/dev/null)" ] && [ -d "$IMAGE_BAKED_SITES" ]; then
-    echo "🌱 Seeding empty sites volume from Golden Build..."
+    step "Seeding sites volume from Golden Build"
     cp -a "$IMAGE_BAKED_SITES/." sites/
-    echo "✅ Volume seeded from baked image."
+    step_done
   fi
 
   # 1. Robust Site Discovery (Req 1)
   # Probe for any initialized site (containing site_config.json)
+  step "Discovering baked site"
   BAKED_SITE=$(ls sites/*/site_config.json 2>/dev/null | head -1 | cut -d/ -f2)
+  step_done
 
   if [ ! -d "sites/$SITE_NAME" ]; then
     echo "🔥 Target site '$SITE_NAME' not found in volume."
 
     # If we have a baked/existing site, RENAME it to the target site name
     if [ -n "$BAKED_SITE" ] && [ "$SITE_NAME" != "$BAKED_SITE" ]; then
-      echo "🔄 Found initialized site '$BAKED_SITE'. Renaming to '$SITE_NAME'..."
-      # Note: bench rename-site is non-standard. If it fails, we fall back to mv.
-      bench rename-site "$BAKED_SITE" "$SITE_NAME" || {
-        echo "⚠️ bench rename-site failed. Performing directory move only..."
-        echo "⚠️ Database references for '$BAKED_SITE' may remain; run 'bench migrate' to refresh."
-        mv "sites/$BAKED_SITE" "sites/$SITE_NAME"
-      }
+      step "Renaming site '$BAKED_SITE' to '$SITE_NAME'"
+      mv "sites/$BAKED_SITE" "sites/$SITE_NAME"
+      step_done
 
       # Improvement 1: Install apps after rename
       if [ -n "$INSTALL_APPS" ]; then
@@ -48,7 +53,8 @@ setup_site() {
         echo "⏳ Waiting for Database at $DB_HOST..."
         MAX_TRIES=60
         COUNT=0
-        until nc -z "$DB_HOST" "${DB_PORT:-5432}"; do
+        until nc -z "$DB_HOST" "${DB_PORT:-5432}" 2>/dev/null || \
+              bash -c "echo >/dev/tcp/$DB_HOST/${DB_PORT:-5432}" 2>/dev/null; do
           COUNT=$((COUNT + 1))
           if [ $COUNT -ge $MAX_TRIES ]; then
             echo "❌ Database at $DB_HOST unreachable after $MAX_TRIES seconds. Exiting."
@@ -128,6 +134,7 @@ start_services() {
     if [ "$(id -u)" = "0" ]; then
       service exim4 start || true
       nginx -g 'daemon off;' &
+      mkdir -p /var/run/supervisor || true
       exec sudo -u frappe bench start
     else
       exec bench start
