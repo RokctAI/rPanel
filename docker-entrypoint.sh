@@ -1,5 +1,6 @@
 #!/bin/bash
 set -e
+set -x
 
 step() {
   printf "  - %s... " "$1"
