@@ -59,8 +59,8 @@ setup_site() {
         echo "⏳ Waiting for Database at $DB_HOST..."
         MAX_TRIES=60
         COUNT=0
-        until nc -z "$DB_HOST" "${DB_PORT:-5432}" 2>/dev/null || \
-              bash -c "echo >/dev/tcp/$DB_HOST/${DB_PORT:-5432}" 2>/dev/null; do
+        until nc -z "$DB_HOST" "${DB_PORT:-5432}" 2>/dev/null ||
+          bash -c "echo >/dev/tcp/$DB_HOST/${DB_PORT:-5432}" 2>/dev/null; do
           COUNT=$((COUNT + 1))
           if [ $COUNT -ge $MAX_TRIES ]; then
             echo "❌ Database at $DB_HOST unreachable after $MAX_TRIES seconds. Exiting."
