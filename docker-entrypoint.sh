@@ -8,6 +8,12 @@ step() {
 step_done() { echo "✓ DONE"; }
 step_fail() { echo "✗ FAILED: $1"; }
 
+step() {
+  printf "  - %s... " "$1"
+}
+step_done() { echo "✓ DONE"; }
+step_fail() { echo "✗ FAILED: $1"; }
+
 # --- Environment Injection is now handled inside setup_site to ensure bench context exists ---
 
 # Function to setup the site based on MODE

@@ -60,6 +60,7 @@ RUN cp -a /home/frappe/frappe-bench/sites /home/frappe/frappe-bench-image-sites
 FROM builder AS full
 USER root
 RUN apt-get update && apt-get install -y nginx exim4-daemon-heavy opendkim opendkim-tools && rm -rf /var/lib/apt/lists/*
+VOLUME ["/etc/exim4", "/var/spool/exim4", "/var/log/exim4", "/etc/opendkim", "/etc/nginx", "/var/log/nginx", "/etc/cron.d"]
 RUN chmod -R 777 /var/log/nginx /var/lib/nginx
 COPY --chown=frappe:frappe docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
