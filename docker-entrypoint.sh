@@ -20,6 +20,11 @@ step_fail() { echo "✗ FAILED: $1"; }
 setup_site() {
   echo "🚀 RPanel entrypoint starting (MODE=$MODE SITE=$SITE_NAME)..."
 
+  if [ "$EXIM_MODE" = "host" ] || [ -f /etc/exim4/update-exim4.conf.conf ] || [ -d /var/spool/exim4 ]; then
+    echo "Exim detected or EXIM_MODE=host -> Docker mail stack disabled"
+    export SKIP_EXIM=1
+  fi
+
   # 0. First-Boot Volume Seeding
   # When a named volume is mounted over /sites, it shadows the baked site.
   # If the volume is empty, seed it from the image-baked copy.
@@ -138,7 +143,11 @@ start_services() {
   "full")
     echo "💻 Full Mode (Control Hub): Starting Web + Mail + Bench..."
     if [ "$(id -u)" = "0" ]; then
-      service exim4 start || true
+      if [ "$SKIP_EXIM" != "1" ]; then
+        service exim4 start || true
+      else
+        echo "Skipping Exim start (host-managed)"
+      fi
       nginx -g 'daemon off;' &
       mkdir -p /var/run/supervisor || true
       exec sudo -u frappe bench start
