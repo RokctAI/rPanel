@@ -161,6 +161,10 @@ jobs:
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "Extract version: $VERSION"
 
+      - name: Confirm Database Readiness
+        run: |
+          timeout 30s bash -c "until pg_isready -h 127.0.0.1 -p 5432 -U postgres; do echo 'Waiting for PostgreSQL...'; sleep 2; done"
+
       - name: Build and Push Control Hub (Full)
         uses: docker/build-push-action@v4
         with:
@@ -177,6 +181,10 @@ jobs:
             IS_ROKCTAI_REPO=${{ github.repository_owner == 'RokctAI' && 'true' || 'false' }}
             DB_HOST=127.0.0.1
 
+      - name: Confirm Database Readiness
+        run: |
+          timeout 30s bash -c "until pg_isready -h 127.0.0.1 -p 5432 -U postgres; do echo 'Waiting for PostgreSQL...'; sleep 2; done"
+
       - name: Build and Push Tenant Spoke (Tenant)
         uses: docker/build-push-action@v4
         with:
@@ -192,6 +200,10 @@ jobs:
             GITHUB_TOKEN=${{ secrets.MONOREPO_PAT || github.token }}
             IS_ROKCTAI_REPO=${{ github.repository_owner == 'RokctAI' && 'true' || 'false' }}
             DB_HOST=127.0.0.1
+
+      - name: Confirm Database Readiness
+        run: |
+          timeout 30s bash -c "until pg_isready -h 127.0.0.1 -p 5432 -U postgres; do echo 'Waiting for PostgreSQL...'; sleep 2; done"
 
       - name: Build and Push IoT Spoke (IoT)
         uses: docker/build-push-action@v4

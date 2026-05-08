@@ -16,7 +16,7 @@ RUN apt-get update -qq && apt-get install -yqq curl ca-certificates gnupg sudo w
 
 # System Dependencies - Step 2: Install packages (after repos are added)
 RUN apt-get update -qq && apt-get install -yqq \
-    git postgresql-16 postgresql-client-16 postgresql-contrib-16 postgresql-16-pgvector \
+    git postgresql-client-16 postgresql-16-pgvector \
     gettext-base build-essential \
     cron vim nodejs redis-server netcat-openbsd \
     libffi-dev libjpeg-dev zlib1g-dev \
