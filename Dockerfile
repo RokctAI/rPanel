@@ -16,7 +16,7 @@ RUN apt-get update -qq && apt-get install -yqq curl ca-certificates gnupg sudo w
 
 # System Dependencies - Step 2: Install packages (after repos are added)
 RUN apt-get update -qq && apt-get install -yqq \
-    git postgresql-16 postgresql-client-16 postgresql-contrib-16 postgresql-16-pgvector \
+    git postgresql-client-16 postgresql-16-pgvector \
     gettext-base build-essential \
     cron vim nodejs redis-server netcat-openbsd \
     libffi-dev libjpeg-dev zlib1g-dev \
@@ -40,7 +40,7 @@ USER root
 RUN git config --global url."https://x-access-token:${GITHUB_TOKEN}@github.com/".insteadOf "git@github.com:" && \
     git config --global url."https://x-access-token:${GITHUB_TOKEN}@github.com/".insteadOf "https://github.com/"
 USER frappe
-ARG DB_HOST=172.17.0.1
+ARG DB_HOST=127.0.0.1
 
 # Inject Context & Run Golden Build
 COPY --chown=frappe:frappe monorepo_overrides /home/frappe/monorepo_overrides
@@ -52,7 +52,7 @@ RUN wget -qO /tmp/build_ecosystem.sh https://raw.githubusercontent.com/RokctAI/s
     export GITHUB_WORKSPACE=/home/frappe/current_repo && \
     export DB_HOST=${DB_HOST} && \
     export APP_NAME=$(cat /home/frappe/current_repo/pyproject.toml 2>/dev/null | grep -m1 'name = "' | cut -d'"' -f2 || echo "rpanel") && \
-    /tmp/build_ecosystem.sh
+    /tmp/build_ecosystem.sh || (cat /tmp/build_ecosystem.log && exit 1)
 
 # Preserve the baked site so the entrypoint can seed an empty volume on first boot
 # (Named volume mounts shadow the image layers, so we keep a backup outside /sites)

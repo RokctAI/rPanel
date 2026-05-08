@@ -114,6 +114,19 @@ jobs:
     if: success() && startsWith(github.repository, 'RokctAI/')
     runs-on: ubuntu-latest
     permissions: write-all
+    services:
+      db:
+        image: ghcr.io/rokctai/monorepo/rpanel-db:latest
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+        env:
+          POSTGRES_PASSWORD: admin
+          POSTGRES_USER: postgres
     outputs:
       version: ${{ steps.meta.outputs.version }}
     steps:
@@ -160,6 +173,10 @@ jobs:
           fi
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "Extract version: $VERSION"
+
+      - name: Confirm Database Readiness
+        run: |
+          timeout 30s bash -c "until pg_isready -h 127.0.0.1 -p 5432 -U postgres; do echo 'Waiting for PostgreSQL...'; sleep 2; done"
 
       - name: Build and Push Control Hub (Full)
         uses: docker/build-push-action@v4
