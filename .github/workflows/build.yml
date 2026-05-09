@@ -114,6 +114,22 @@ jobs:
     if: success() && startsWith(github.repository, 'RokctAI/')
     runs-on: ubuntu-latest
     permissions: write-all
+    services:
+      db:
+        image: ghcr.io/rokctai/monorepo/rpanel-db:latest
+        credentials:
+          username: ${{ github.actor }}
+          password: ${{ secrets.MONOREPO_PAT }}
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+        env:
+          POSTGRES_PASSWORD: admin
+          POSTGRES_USER: postgres
     outputs:
       version: ${{ steps.meta.outputs.version }}
     steps:
@@ -161,12 +177,17 @@ jobs:
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "Extract version: $VERSION"
 
+      - name: Confirm Database Readiness
+        run: |
+          timeout 30s bash -c "until pg_isready -h 127.0.0.1 -p 5432 -U postgres; do echo 'Waiting for PostgreSQL...'; sleep 2; done"
+
       - name: Build and Push Control Hub (Full)
         uses: docker/build-push-action@v4
         with:
           context: docker-context
           file: docker-context/Dockerfile
           target: full
+          network: host
           push: true
           tags: |
             ghcr.io/rokctai/monorepo/rpanel-control:latest
@@ -174,6 +195,7 @@ jobs:
           build-args: |
             GITHUB_TOKEN=${{ secrets.MONOREPO_PAT || github.token }}
             IS_ROKCTAI_REPO=${{ github.repository_owner == 'RokctAI' && 'true' || 'false' }}
+            DB_HOST=127.0.0.1
 
       - name: Build and Push Tenant Spoke (Tenant)
         uses: docker/build-push-action@v4
@@ -181,6 +203,7 @@ jobs:
           context: docker-context
           file: docker-context/Dockerfile
           target: tenant
+          network: host
           push: true
           tags: |
             ghcr.io/rokctai/monorepo/rpanel-tenant:latest
@@ -188,6 +211,7 @@ jobs:
           build-args: |
             GITHUB_TOKEN=${{ secrets.MONOREPO_PAT || github.token }}
             IS_ROKCTAI_REPO=${{ github.repository_owner == 'RokctAI' && 'true' || 'false' }}
+            DB_HOST=127.0.0.1
 
       - name: Build and Push IoT Spoke (IoT)
         uses: docker/build-push-action@v4
@@ -195,6 +219,7 @@ jobs:
           context: docker-context
           file: docker-context/Dockerfile
           target: iot
+          network: host
           push: true
           tags: |
             ghcr.io/rokctai/monorepo/rpanel-iot:latest
@@ -202,6 +227,7 @@ jobs:
           build-args: |
             GITHUB_TOKEN=${{ secrets.MONOREPO_PAT || github.token }}
             IS_ROKCTAI_REPO=${{ github.repository_owner == 'RokctAI' && 'true' || 'false' }}
+            DB_HOST=127.0.0.1
 
       - name: Build and Push Postgres (Custom)
         uses: docker/build-push-action@v4

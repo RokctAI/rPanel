@@ -404,13 +404,13 @@ install_bench() {
   fi
 
   if [[ -n "$bench_bin" ]]; then
-    ln -sf "$bench_bin" /usr/local/bin/bench
+    ln -sf "$bench_bin" /usr/local/bin/bench 2>/dev/null || true
   else
     # Fallback: try to find it relative to Python
     local py_dir
     py_dir=$(dirname "$PYTHON_BIN")
     if [[ -f "$py_dir/bench" ]]; then
-      ln -sf "$py_dir/bench" /usr/local/bin/bench
+      ln -sf "$py_dir/bench" /usr/local/bin/bench 2>/dev/null || true
     fi
   fi
 
