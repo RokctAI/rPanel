@@ -117,6 +117,9 @@ jobs:
     services:
       db:
         image: ghcr.io/rokctai/monorepo/rpanel-db:latest
+        credentials:
+          username: ${{ github.actor }}
+          password: ${{ secrets.MONOREPO_PAT }}
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
