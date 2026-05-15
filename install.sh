@@ -435,7 +435,17 @@ fresh)
   install_system_deps
   configure_exim4
   if [[ "$DB_TYPE" == "postgres" ]]; then
-    configure_postgresql
+    DB_HOST="${DB_HOST:-localhost}"
+    if pg_isready -h "$DB_HOST" -p 5432 -U postgres >/dev/null 2>&1; then
+      echo "  - External PostgreSQL detected at $DB_HOST. Skipping local setup."
+      export PGPASSWORD="${DB_ROOT_PASS:-admin}"
+      # Ensure extensions exist on the external instance
+      psql -h "$DB_HOST" -U postgres -d template1 -c "CREATE EXTENSION IF NOT EXISTS vector;" >/dev/null 2>&1 || true
+      psql -h "$DB_HOST" -U postgres -d template1 -c "CREATE EXTENSION IF NOT EXISTS cube;" >/dev/null 2>&1 || true
+      psql -h "$DB_HOST" -U postgres -d template1 -c "CREATE EXTENSION IF NOT EXISTS earthdistance;" >/dev/null 2>&1 || true
+    else
+      configure_postgresql
+    fi
   else
     configure_mariadb
   fi
@@ -453,7 +463,7 @@ LATEST_TAG=$(fetch_latest_tag || echo "")
 TAG_OPTION=""
 [ -n "$LATEST_TAG" ] && TAG_OPTION="--branch $LATEST_TAG"
 
-run_quiet "Installing RPanel app" sudo -u frappe -i bash -c "set -e; export PATH=\"\$PATH:/home/frappe/.local/bin\"; cd /home/frappe/frappe-bench; if [ ! -d \"apps/rpanel\" ]; then bench get-app https://github.com/RokctAI/rpanel.git $TAG_OPTION --skip-assets; else cd apps/rpanel && git fetch --tags && ([ -n \"$LATEST_TAG\" ] && git checkout \"$LATEST_TAG\" || git pull); cd ../..; fi; if [ ! -d \"sites/${DOMAIN_NAME:-rpanel.local}\" ]; then bench new-site --admin-password admin --db-root-password \"$DB_ROOT_PASS\" $([[ \"$DB_TYPE\" == \"postgres\" ]] && echo \"--db-type=postgres\") --force \"${DOMAIN_NAME:-rpanel.local}\"; fi; $PYTHON_BIN -c \"import os; f='sites/apps.txt'; apps=open(f).read().splitlines() if os.path.exists(f) else []; (apps.append('rpanel') if 'rpanel' not in apps else None); open(f, 'w').write('\\n'.join(apps) + '\\n')\"; bench --site \"${DOMAIN_NAME:-rpanel.local}\" install-app rpanel; bench setup redis"
+run_quiet "Installing RPanel app" sudo -u frappe -i bash -c "set -e; export PATH=\"\$PATH:/home/frappe/.local/bin\"; cd /home/frappe/frappe-bench; if [ ! -d \"apps/rpanel\" ]; then bench get-app https://github.com/RokctAI/rpanel.git $TAG_OPTION --skip-assets; else cd apps/rpanel && git fetch --tags && ([ -n \"$LATEST_TAG\" ] && git checkout \"$LATEST_TAG\" || git pull); cd ../..; fi; if [ ! -d \"sites/${DOMAIN_NAME:-rpanel.local}\" ]; then bench new-site --admin-password admin --db-root-password \"$DB_ROOT_PASS\" $([[ \"$DB_TYPE\" == \"postgres\" ]] && echo \"--db-type=postgres\") $([[ \"$DB_TYPE\" == \"postgres\" && -n \"$DB_HOST\" && \"$DB_HOST\" != \"localhost\" ]] && echo \"--db-host $DB_HOST\") --force \"${DOMAIN_NAME:-rpanel.local}\"; fi; $PYTHON_BIN -c \"import os; f='sites/apps.txt'; apps=open(f).read().splitlines() if os.path.exists(f) else []; (apps.append('rpanel') if 'rpanel' not in apps else None); open(f, 'w').write('\\n'.join(apps) + '\\n')\"; bench --site \"${DOMAIN_NAME:-rpanel.local}\" install-app rpanel; bench setup redis"
 
 # Asset build
 if [[ "$SKIP_ASSETS" != "true" ]]; then
