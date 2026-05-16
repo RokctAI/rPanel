@@ -39,7 +39,7 @@ chmod 666 "$INSTALL_LOG"
 echo -e "${BLUE}Detailed logs available at: $INSTALL_LOG${NC}"
 
 # Hardcoded administrative password
-DB_ROOT_PASS="rpanel_secure_db_pass"
+DB_ROOT_PASS="${DB_ROOT_PASS:-rpanel_secure_db_pass}"
 
 # Determine deployment mode
 MODE="${DEPLOY_MODE:-fresh}"
