@@ -436,7 +436,7 @@ fresh)
   configure_exim4
   if [[ "$DB_TYPE" == "postgres" ]]; then
     DB_HOST="${DB_HOST:-localhost}"
-    if pg_isready -h "$DB_HOST" -p 5432 -U postgres >/dev/null 2>&1; then
+    if [[ "$DB_HOST" != "127.0.0.1" && "$DB_HOST" != "localhost" ]] && pg_isready -h "$DB_HOST" -p 5432 -U postgres >/dev/null 2>&1; then
       echo -e "${BLUE}  - External PostgreSQL detected at $DB_HOST. Skipping local setup.${NC}"
       export PGPASSWORD="${DB_ROOT_PASS:-admin}"
       # Ensure extensions exist on the external instance
