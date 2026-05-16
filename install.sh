@@ -20,8 +20,8 @@ NC='\033[0;0m'
 # Global Build Hardening
 export CI=${CI:-true}
 export DEBIAN_FRONTEND=noninteractive
-# Use 1.5GB to force more aggressive GC.
-export NODE_OPTIONS='--max-old-space-size=1536'
+# Use 2GB to force more aggressive GC.
+export NODE_OPTIONS='--max-old-space-size=2048'
 export ESBUILD_WORKERS=1
 export MAX_WORKERS=1
 export CPU_COUNT=1
@@ -288,7 +288,9 @@ install_system_deps() {
   run_quiet "Adding NodeSource Repo" bash -c "echo \"deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_22.x nodistro main\" > /etc/apt/sources.list.d/nodesource.list"
   run_quiet "Updating package lists for Node.js" apt-get update
   run_quiet "Installing Node.js" apt-get install -y nodejs
+  export NODE_OPTIONS='--max-old-space-size=2048'
   run_quiet "Installing Yarn" npm install -g yarn
+  export PATH="$PATH:$(npm config get prefix)/bin"
   run_quiet "Configuring Yarn global policy" yarn config set ignore-engines true -g
 
   # Configure automatic security updates
