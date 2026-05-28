@@ -48,3 +48,13 @@ class VPSProvider(ABC):
 			bool: True if successful, False otherwise.
 		"""
 		pass
+
+	@abstractmethod
+	def terminate_vps(self, vps_id: str, **kwargs) -> bool:
+		"""
+		Permanently cancels and terminates the VPS instance subscription.
+		
+		Returns:
+			bool: True if successful, False otherwise.
+		"""
+		pass

@@ -106,3 +106,15 @@ class OVHVPSProvider(VPSProvider):
 		except Exception as e:
 			frappe.log_error(f"OVH Reboot Failed for {vps_id}: {e}", "VPS Orchestrator Error")
 			return False
+
+	def terminate_vps(self, vps_id: str, **kwargs) -> bool:
+		"""
+		Permanently terminates the VPS service on OVH.
+		"""
+		try:
+			# OVH API to cancel/terminate the service
+			self.client.post(f'/vps/{vps_id}/terminate')
+			return True
+		except Exception as e:
+			frappe.log_error(f"OVH VPS Termination Failed for {vps_id}: {e}", "VPS Orchestrator Error")
+			return False
