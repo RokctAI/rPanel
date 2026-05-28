@@ -38,7 +38,8 @@ class OVHVPSProvider(VPSProvider):
 			# 3. Add designated VPS plan item
 			vps_item = self.client.post(f'/order/cart/{cart_id}/vps',
 				duration=kwargs.get("duration", "P1M"), # Monthly billing cycles
-				planCode=plan_code
+				planCode=plan_code,
+				pricingMode=kwargs.get("pricingMode", "default") # "default" pricing mode has no commitment
 			)
 			
 			# 4. Trigger auto-checkout (bills registered default credit card/balance on file)
