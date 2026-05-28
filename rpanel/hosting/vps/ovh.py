@@ -11,8 +11,9 @@ class OVHVPSProvider(VPSProvider):
 	Utilizes the official 'ovh' Python SDK.
 	"""
 
-	def __init__(self, endpoint: str = "ovh-eu", **kwargs):
+	def __init__(self, endpoint: str = None, **kwargs):
 		# Leverage in-memory keys from frappe configs, environment, or custom init args
+		endpoint = endpoint or frappe.conf.get("ovh_endpoint") or "ovh-ca"
 		self.client = ovh.Client(
 			endpoint=endpoint,
 			application_key=kwargs.get("application_key") or frappe.conf.get("ovh_application_key"),
