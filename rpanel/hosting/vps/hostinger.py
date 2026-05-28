@@ -57,6 +57,12 @@ class HostingerVPSProvider(VPSProvider):
 						rename_payload = {"name": cleaned_site_name}
 						requests.put(f"{self.api_url}/virtual-machines/{vps_id}", json=rename_payload, headers=self.headers, timeout=20)
 						
+						# 1.5 Rebuild/re-install a fresh clean OS template to completely wipe old tenant data
+						image_name = kwargs.get("image", "debian-12-docker")
+						rebuild_payload = {"operating_system": image_name}
+						frappe.log(f"Hostinger Provider: Rebuilding instance {vps_id} with clean image '{image_name}' to wipe previous tenant data...")
+						requests.post(f"{self.api_url}/virtual-machines/{vps_id}/rebuild", json=rebuild_payload, headers=self.headers, timeout=30)
+						
 						# 2. Wake it up / Start it
 						requests.post(f"{self.api_url}/virtual-machines/{vps_id}/start", json={}, headers=self.headers, timeout=20)
 						
