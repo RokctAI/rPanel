@@ -12,3 +12,4 @@ google-api-python-client
 pyotp
 qrcode[pil]
 gnupg
+ovh
