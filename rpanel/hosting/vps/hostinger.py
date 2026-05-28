@@ -22,17 +22,62 @@ class HostingerVPSProvider(VPSProvider):
 
 	def create_vps(self, plan_code: str, site_name: str, **kwargs) -> dict:
 		"""
-		Orders/purchases a brand new Hostinger KVM VPS instance dynamically.
+		Provisions a Hostinger VPS. First scans the active VPS list for any stopped/sleeping 
+		pre-paid instances (names starting with 'sleep-', 'prepaid-', or 'unassigned-').
+		If a stopped instance is found, it reuses it by renaming and starting it, 
+		saving billing costs. Otherwise, purchases a brand new one.
 		"""
 		if not self.token:
 			return {"status": "failed", "error": "Hostinger API Token is missing."}
 
+		cleaned_site_name = site_name.replace(".", "-")
+
+		# --- SLEEP POOL REUSE OPTIMIZATION ---
+		try:
+			frappe.log("Hostinger Provider: Checking for stopped/sleeping pre-paid VPS instances to reuse...")
+			list_res = requests.get(f"{self.api_url}/virtual-machines", headers=self.headers, timeout=20)
+			if list_res.status_code == 200:
+				vms = list_res.json().get("virtual_machines", []) or list_res.json()
+				if isinstance(vms, dict):
+					vms = vms.get("data", [])
+				
+				for vm in vms:
+					vm_name = vm.get("name", "").lower()
+					vm_status = vm.get("status", "").lower()
+					vps_id = vm.get("id")
+
+					# Identify reusable sleeping/unassigned VPS
+					is_stopped = vm_status in ["stopped", "off", "paused"]
+					is_generic_name = any(prefix in vm_name for prefix in ["sleep-", "prepaid-", "unassigned-"])
+
+					if is_stopped and is_generic_name:
+						frappe.log(f"Hostinger Provider: Found sleeping instance '{vm.get('name')}' (ID: {vps_id}). Reusing...")
+						
+						# 1. Rename to new site name
+						rename_payload = {"name": cleaned_site_name}
+						requests.put(f"{self.api_url}/virtual-machines/{vps_id}", json=rename_payload, headers=self.headers, timeout=20)
+						
+						# 2. Wake it up / Start it
+						requests.post(f"{self.api_url}/virtual-machines/{vps_id}/start", json={}, headers=self.headers, timeout=20)
+						
+						frappe.log(f"SUCCESS: Hostinger KVM VPS '{vm.get('name')}' (ID: {vps_id}) successfully reused and woken up for {site_name}")
+						return {
+							"status": "success",
+							"order_id": vps_id,
+							"vps_id": str(vps_id),
+							"ip": vm.get("ip_address") or vm.get("ip"),
+							"reused": True
+						}
+		except Exception as reuse_err:
+			frappe.log_error(f"Hostinger Sleep Pool reuse check failed (falling back to fresh creation): {reuse_err}", "VPS Orchestrator Warning")
+
+		# --- FALLBACK: CREATE A BRAND NEW INSTANCE ---
 		try:
 			# Plan mapping: map 'vps-1' to Hostinger's 8GB RAM plan 'kvm-4' or specific plan code
 			plan = "kvm-4" if plan_code in ["vps-1", "vps-comfort-8"] else plan_code
 			
 			payload = {
-				"name": site_name.replace(".", "-"),
+				"name": cleaned_site_name,
 				"plan": plan,
 				"operating_system": kwargs.get("image", "debian-12-docker"),
 				"location": kwargs.get("location", "us-east")
@@ -55,7 +100,8 @@ class HostingerVPSProvider(VPSProvider):
 					"status": "success",
 					"order_id": vps_id,
 					"vps_id": str(vps_id),
-					"ip": vm.get("ip_address") or vm.get("ip")
+					"ip": vm.get("ip_address") or vm.get("ip"),
+					"reused": False
 				}
 			else:
 				error_msg = res_data.get("message") or res_data.get("error", "Unknown error")
