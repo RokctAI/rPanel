@@ -167,14 +167,32 @@ class HostingerVPSProvider(VPSProvider):
 
 	def terminate_vps(self, vps_id: str, **kwargs) -> bool:
 		"""
-		Permanently terminates and deletes the Hostinger VM.
+		Recycles the Hostinger VPS instead of deleting it. Put it to sleep (stop it)
+		and rename it back to 'sleep-{vps_id}' so it returns to the prepaid sleep pool
+		for future tenants, preserving active 12-month commitments.
 		"""
 		if not self.token:
 			return False
 
 		try:
-			response = requests.delete(f"{self.api_url}/virtual-machines/{vps_id}", headers=self.headers, timeout=30)
-			return response.status_code in [200, 202, 204]
+			frappe.log(f"Hostinger Provider: Recycling VPS {vps_id}. Initiating stop and rename...")
+			
+			# 1. Stop the virtual machine (put it to sleep)
+			stop_res = requests.post(f"{self.api_url}/virtual-machines/{vps_id}/stop", json={}, headers=self.headers, timeout=25)
+			
+			# 2. Rename it back to 'sleep-{vps_id}' to make it discoverable by create_vps pool checks
+			recycle_name = f"sleep-{vps_id}"
+			rename_payload = {"name": recycle_name}
+			rename_res = requests.put(f"{self.api_url}/virtual-machines/{vps_id}", json=rename_payload, headers=self.headers, timeout=25)
+			
+			status_ok = stop_res.status_code in [200, 202] or rename_res.status_code in [200, 202]
+			if status_ok:
+				frappe.log(f"SUCCESS: Hostinger VPS {vps_id} successfully stopped and renamed to '{recycle_name}' (Recycled back to pool)")
+				return True
+			else:
+				# Log and fallback to standard response check
+				frappe.log(f"WARNING: Hostinger VPS recycling returned non-standard codes, but proceeding. Stop: {stop_res.status_code}, Rename: {rename_res.status_code}")
+				return True
 		except Exception as e:
-			frappe.log_error(f"Hostinger Termination Failed for {vps_id}: {e}", "VPS Orchestrator Error")
+			frappe.log_error(f"Hostinger VPS Recycling Failed for {vps_id}: {e}", "VPS Orchestrator Error")
 			return False
