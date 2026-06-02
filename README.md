@@ -5,7 +5,6 @@
 [![Latest Version](https://img.shields.io/github/v/release/rokctAI/rpanel?label=Stable%20Version)](https://github.com/rokctAI/rpanel/releases)
 [![Build Status](https://github.com/rokctAI/rpanel/actions/workflows/auto_release.yml/badge.svg)](https://github.com/rokctAI/rpanel/actions)
 
-
 **rPanel** is a powerful, open-source web hosting control panel built on the Frappe Framework (v15). It is designed to be a complete alternative to cPanel/Plesk, offering a modern UI for managing websites, databases, emails, and servers.
 
 rPanel works by orchestrating standard open-source technologies (Nginx, PostgreSQL, MariaDB, Exim, etc.) through a beautiful, easy-to-use interface. It can manage the server it's installed on (Local Mode) or manage multiple remote servers via SSH (Cluster Mode).
@@ -13,6 +12,7 @@ rPanel works by orchestrating standard open-source technologies (Nginx, PostgreS
 ## 🚀 Key Features
 
 ### 🌐 Website Management
+
 - One-click website provisioning
 - WordPress auto-installation
 - PHP version management (8.3, 8.2, 8.1, 7.4)
@@ -20,6 +20,7 @@ rPanel works by orchestrating standard open-source technologies (Nginx, PostgreS
 - Standard directory structure
 
 ### 🔒 SSL & Security
+
 - Automatic Let's Encrypt SSL certificates
 - SSL renewal automation
 - Firewall management (UFW)
@@ -28,12 +29,14 @@ rPanel works by orchestrating standard open-source technologies (Nginx, PostgreS
 - Security audit logs
 
 ### 📧 Email Management
+
 - Email account creation
 - SMTP/IMAP configuration
 - Roundcube webmail integration
 - Email forwarding & aliases
 
 ### 💾 Database Management
+
 - **PostgreSQL First**: Native PostgreSQL support as the core engine
 - **MariaDB/MySQL**: Full compatibility for legacy sites and opt-in selection
 - **WordPress Bridge**: Automated [PG4WP](https://github.com/PostgreSQL-For-Wordpress/postgresql-for-wordpress) installation for WP on PostgreSQL
@@ -41,6 +44,7 @@ rPanel works by orchestrating standard open-source technologies (Nginx, PostgreS
 - Database user management with automatic secure credentials
 
 ### 📁 File Management
+
 - Web-based file browser
 - Upload/download files
 - File editing
@@ -48,12 +52,14 @@ rPanel works by orchestrating standard open-source technologies (Nginx, PostgreS
 - Permission management
 
 ### 🔄 Backups & Recovery
+
 - Automated backups (full/database/files)
 - Cloud storage integration (S3, Google Drive, Dropbox)
 - One-click restore
 - Backup scheduling
 
 ### ⚙️ Automation
+
 - Cron job management
 - Scheduled tasks
 - SSL auto-renewal
@@ -61,6 +67,7 @@ rPanel works by orchestrating standard open-source technologies (Nginx, PostgreS
 - Health monitoring
 
 ### 🖥️ Multi-Server Management
+
 - Server groups
 - Load balancing
 - Remote server provisioning
@@ -68,12 +75,14 @@ rPanel works by orchestrating standard open-source technologies (Nginx, PostgreS
 - Resource monitoring
 
 ### 🎨 White-Label Branding
+
 - Custom logos
 - Brand colors
 - Client portals
 - Custom domains
 
 ### 🛡️ Enterprise Compliance Readiness
+
 RPanel is built to help you meet strict industry standards. While the software itself cannot be "certified" (only your organization can), RPanel provides the specific technical controls required for:
 
 - **SOC 2 Compliance:**
@@ -110,6 +119,7 @@ RPanel can be installed in two ways: as a standalone control panel on a fresh se
 This is the "Boss Mode" installation. It sets up everything from scratch on a fresh Ubuntu 22.04 or Debian 11/12 server.
 
 **What it installs:**
+
 - Node.js 24 & Python 3.14 (Latest Standards)
 - Dual-Stack Databases (PostgreSQL + MariaDB)
 - Frappe Bench & Framework (v15)
@@ -158,6 +168,7 @@ bench --site [your-site.com] migrate
 ```
 
 **Benefits of using stable releases:**
+
 - ✅ Tested and production-ready code
 - ✅ Predictable behavior
 - ✅ Easy rollback to previous versions
@@ -203,6 +214,7 @@ backup_retention_days = 30
 ### Server Provisioning
 
 RPanel can automatically install required software on remote servers:
+
 - Nginx
 - MariaDB
 - PHP (multiple versions)
@@ -279,11 +291,11 @@ RPanel
 
 We welcome contributions! RPanel is MIT Licensed and open source.
 
-1.  Fork the repository
-2.  Create a feature branch (`git checkout -b feature/amazing-feature`)
-3.  Commit your changes (`git commit -m 'Add amazing feature'`)
-4.  Push to the branch (`git push origin feature/amazing-feature`)
-5.  Open a Pull Request
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
 ## 👥 Credits
 
@@ -293,16 +305,17 @@ We welcome contributions! RPanel is MIT Licensed and open source.
 
 **Community Contributions:**
 Our release notes are automatically powered by the `universal-release` workflow, capturing Authors and Reviewers from every merged Pull Request to ensure proper attribution.
+
 - [Nurudin Ahmed](https://github.com/nurudinso)
 
 ## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-
 ## 🔌 Integration Guide
 
 Building a Billing System or Control Plane? Check out our **[Integration Examples](integration_examples/README.md)** for code snippets on:
+
 - Auto-installing RPanel
 - Syncing Quotas & Plans
 - Automating Provisioning
@@ -310,4 +323,3 @@ Building a Billing System or Control Plane? Check out our **[Integration Example
 ---
 
 **RPanel** - Hosting made simple, powerful, and open.
-

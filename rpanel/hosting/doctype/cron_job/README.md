@@ -1,9 +1,11 @@
 # Cron Job Manager
 
 ## Overview
+
 The Cron Job Manager allows you to schedule and manage automated tasks for your hosted websites.
 
 ## Features
+
 - Visual cron expression builder
 - Pre-built templates for common tasks
 - Execution history and logs
@@ -13,6 +15,7 @@ The Cron Job Manager allows you to schedule and manage automated tasks for your 
 ## Usage
 
 ### Creating a Cron Job
+
 1. Navigate to Hosting > Cron Job > New
 2. Enter job name and select website
 3. Enter command to execute
@@ -21,6 +24,7 @@ The Cron Job Manager allows you to schedule and manage automated tasks for your 
 6. Save
 
 ### Cron Expression Format
+
 ```
 * * * * *
 │ │ │ │ │
@@ -32,12 +36,14 @@ The Cron Job Manager allows you to schedule and manage automated tasks for your 
 ```
 
 ### Examples
+
 - `0 2 * * *` - Daily at 2 AM
 - `0 */6 * * *` - Every 6 hours
 - `0 0 * * 0` - Weekly on Sunday at midnight
 - `0 3 1 * *` - Monthly on 1st at 3 AM
 
 ### Available Templates
+
 - Daily Backup
 - Clear Cache
 - Update WordPress
@@ -45,6 +51,7 @@ The Cron Job Manager allows you to schedule and manage automated tasks for your 
 - Log Rotation
 
 ## Security
+
 - Commands execute in website directory
 - 5-minute timeout for safety
 - Execution logs tracked

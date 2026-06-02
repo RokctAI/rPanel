@@ -37,6 +37,7 @@ All installation scripts read from this file:
 ## Dependency Categories
 
 ### System Dependencies (Hosting Services)
+
 - Web servers (nginx)
 - Databases (mariadb, postgresql)
 - Email (exim4, dovecot)
@@ -46,6 +47,7 @@ All installation scripts read from this file:
 - Security (clamav, fail2ban, ufw)
 
 ### Core Dependencies (Frappe Requirements)
+
 - Python 3
 - Redis
 - MariaDB
