@@ -141,7 +141,7 @@ The **Hosting** workspace provides:
 
 ## File Structure
 
-```
+```text
 hosting/
 ├── __init__.py
 ├── utils.py                          # Certbot and Exim utilities
@@ -220,7 +220,7 @@ hosting/
 - `update_email_config()` - Update Exim configuration
 - `deprovision_site()` - Remove site configuration
 
-### Hosting Settings
+### Hosting Settings API
 
 - `renew_platform_ssl()` - Renew platform SSL
 - `renew_wildcard_ssl()` - Renew wildcard SSL

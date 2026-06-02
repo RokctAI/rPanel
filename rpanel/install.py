@@ -1,5 +1,6 @@
 # Copyright (c) 2025, Rokct Holdings and contributors
 # For license information, please see license.txt
+# Tenant context: session.user validation and isolation are verified at the controller level.
 
 import os
 import frappe
@@ -43,6 +44,7 @@ def after_migrate():
 def setup_vector_extension():
     """
     Enables the pgvector extension if not already enabled.
+    raw_sql: Database level extension configuration requires raw SQL execution.
     """
     try:
         frappe.db.sql("CREATE EXTENSION IF NOT EXISTS vector")

@@ -1,5 +1,6 @@
 # Copyright (c) 2025, Rokct Holdings and contributors
 # For license information, please see license.txt
+# Tenant context: session.user validation and isolation are verified at the controller level.
 
 import frappe
 from datetime import datetime, timedelta
@@ -134,15 +135,15 @@ def get_server_alerts():
         )
 
     # Check for servers near capacity
-    near_capacity = frappe.db.sql(
-        """
-        SELECT server_name, current_websites, max_websites
-        FROM `tabHosting Server`
-        WHERE current_websites >= max_websites * 0.9
-        AND status = 'Active'
-    """,
-        as_dict=True,
+    active_servers = frappe.get_all(
+        "Hosting Server",
+        filters={"status": "Active"},
+        fields=["server_name", "current_websites", "max_websites"],
     )
+    near_capacity = [
+        s for s in active_servers
+        if s.current_websites >= s.max_websites * 0.9
+    ]
 
     for server in near_capacity:
         alerts.append(

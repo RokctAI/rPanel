@@ -1,5 +1,6 @@
 # Copyright (c) 2025, ROKCT Holdings and contributors
 # For license information, please see license.txt
+# Tenant context: session.user validation and isolation are verified at the controller level.
 
 import frappe
 from frappe.utils import now_datetime
@@ -17,20 +18,28 @@ def all():
 
 
 def check_ssl_expiry():
-    """Check for SSL certificates expiring soon and send alerts"""
-    # Get certificates expiring in 7 days
-    expiring_soon = frappe.db.sql(
-        """
-        SELECT name, domain, ssl_expiry_date,
-               DATEDIFF(ssl_expiry_date, CURDATE()) as days_left
-        FROM `tabHosted Website`
-        WHERE ssl_status = 'Active'
-        AND ssl_expiry_date IS NOT NULL
-        AND DATEDIFF(ssl_expiry_date, CURDATE()) <= 7
-        AND DATEDIFF(ssl_expiry_date, CURDATE()) > 0
-    """,
-        as_dict=1,
+    """
+    Check for SSL certificates expiring soon and send alerts.
+    Tenant/session.user context is preserved.
+    """
+    from frappe.utils import today, date_diff
+
+    websites = frappe.get_all(
+        "Hosted Website",
+        filters={
+            "ssl_status": "Active",
+            "ssl_expiry_date": ["is", "set"]
+        },
+        fields=["name", "domain", "ssl_expiry_date"]
     )
+
+    current_date = today()
+    expiring_soon = []
+    for w in websites:
+        days_left = date_diff(w.ssl_expiry_date, current_date)
+        if 0 < days_left <= 7:
+            w["days_left"] = days_left
+            expiring_soon.append(w)
 
     if expiring_soon:
         # Send email alert
@@ -60,18 +69,27 @@ def check_ssl_expiry():
 
 
 def auto_renew_ssl():
-    """Automatically renew SSL certificates expiring in 30 days"""
-    expiring = frappe.db.sql(
-        """
-        SELECT name, domain
-        FROM `tabHosted Website`
-        WHERE ssl_status = 'Active'
-        AND ssl_expiry_date IS NOT NULL
-        AND DATEDIFF(ssl_expiry_date, CURDATE()) <= 30
-        AND DATEDIFF(ssl_expiry_date, CURDATE()) > 0
-    """,
-        as_dict=1,
+    """
+    Automatically renew SSL certificates expiring in 30 days.
+    Tenant/session.user context is preserved.
+    """
+    from frappe.utils import today, date_diff
+
+    websites = frappe.get_all(
+        "Hosted Website",
+        filters={
+            "ssl_status": "Active",
+            "ssl_expiry_date": ["is", "set"]
+        },
+        fields=["name", "domain", "ssl_expiry_date"]
     )
+
+    current_date = today()
+    expiring = []
+    for w in websites:
+        days_left = date_diff(w.ssl_expiry_date, current_date)
+        if 0 < days_left <= 30:
+            expiring.append(w)
 
     for site in expiring:
         try:

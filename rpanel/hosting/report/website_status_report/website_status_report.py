@@ -73,57 +73,60 @@ def get_columns():
 
 
 def get_data(filters):
-    conditions = get_conditions(filters)
-
-    websites = frappe.db.sql(
-        f"""
-        SELECT
-            hw.name as domain,
-            hw.status,
-            hw.site_type,
-            hw.cms_type,
-            hw.php_version,
-            hw.ssl_status,
-            hw.db_name,
-            hw.creation,
-            (SELECT COUNT(*) FROM `tabHosted Email Account`
-             WHERE parent = hw.name) as email_count
-        FROM
-            `tabHosted Website` hw
-        WHERE
-            1=1
-            {conditions}
-        ORDER BY
-            hw.creation DESC
-    """,
-        as_dict=1,
-    )
-
-    return websites
-
-
-def get_conditions(filters):
-    conditions = ""
+    """
+    Get website status using database-agnostic Frappe ORM queries.
+    Tenant/session.user context is preserved.
+    """
+    db_filters = {}
 
     if filters.get("domain"):
-        conditions += f" AND hw.name LIKE '%{filters.get('domain')}%'"
+        db_filters["name"] = ["like", f"%{filters.get('domain')}%"]
 
     if filters.get("status"):
-        conditions += f" AND hw.status = '{filters.get('status')}'"
+        db_filters["status"] = filters.get("status")
 
     if filters.get("site_type"):
-        conditions += f" AND hw.site_type = '{filters.get('site_type')}'"
+        db_filters["site_type"] = filters.get("site_type")
 
     if filters.get("ssl_status"):
-        conditions += f" AND hw.ssl_status = '{filters.get('ssl_status')}'"
+        db_filters["ssl_status"] = filters.get("ssl_status")
 
-    if filters.get("from_date"):
-        conditions += f" AND hw.creation >= '{filters.get('from_date')}'"
+    if filters.get("from_date") or filters.get("to_date"):
+        creation_filter = []
+        if filters.get("from_date"):
+            creation_filter.append([">=", filters.get("from_date")])
+        if filters.get("to_date"):
+            creation_filter.append(["<=", filters.get("to_date")])
+        db_filters["creation"] = creation_filter
 
-    if filters.get("to_date"):
-        conditions += f" AND hw.creation <= '{filters.get('to_date')}'"
+    websites = frappe.get_all(
+        "Hosted Website",
+        filters=db_filters,
+        fields=[
+            "name as domain",
+            "status",
+            "site_type",
+            "cms_type",
+            "php_version",
+            "ssl_status",
+            "db_name",
+            "creation",
+        ],
+        order_by="creation desc",
+    )
 
-    return conditions
+    # Get email counts using ORM group by parent
+    email_counts = frappe.get_all(
+        "Hosted Email Account",
+        fields=["parent", "count(name) as email_count"],
+        group_by="parent",
+    )
+    email_map = {e.parent: e.email_count for e in email_counts if e.parent}
+
+    for w in websites:
+        w["email_count"] = email_map.get(w.domain, 0)
+
+    return websites
 
 
 def get_chart_data(data):

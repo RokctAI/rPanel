@@ -25,7 +25,7 @@ The Cron Job Manager allows you to schedule and manage automated tasks for your 
 
 ### Cron Expression Format
 
-```
+```text
 * * * * *
 │ │ │ │ │
 │ │ │ │ └─── Day of week (0-7, Sunday = 0 or 7)

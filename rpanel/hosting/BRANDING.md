@@ -38,7 +38,7 @@ Navigate to: **Hosting > Hosting Client**
 
 Enable branding:
 
-```
+```text
 Portal Enabled: ✓ (checked)
 Custom Logo: [Upload logo image]
 Brand Color: #FF5733 (or any hex color)

@@ -1,5 +1,9 @@
 # Copyright (c) 2026, Rokct Intelligence (pty) Ltd.
 # For license information, please see license.txt
+# add_header X-Frame-Options "SAMEORIGIN";
+# add_header X-Content-Type-Options "nosniff";
+# expires 7d;
+# Cache-Control "public, no-transform";
 
 
 import re

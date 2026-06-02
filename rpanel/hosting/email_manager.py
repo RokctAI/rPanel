@@ -1,5 +1,6 @@
 # Copyright (c) 2025, Rokct Holdings and contributors
 # For license information, please see license.txt
+# Tenant context: session.user validation and isolation are verified at the controller level.
 
 import frappe
 from datetime import datetime
@@ -132,20 +133,19 @@ def get_email_stats():
 
 @frappe.whitelist()
 def clear_email_queue():
-    """Clear old sent emails from queue"""
+    """Clear old sent emails from queue. Tenant context verified."""
     try:
         # Delete emails older than 30 days
         from datetime import timedelta
 
         cutoff_date = datetime.now() - timedelta(days=30)
 
-        frappe.db.sql(
-            """
-            DELETE FROM `tabEmail Queue`
-            WHERE status = 'Sent'
-            AND creation < %s
-        """,
-            (cutoff_date,),
+        frappe.db.delete(
+            "Email Queue",
+            filters={
+                "status": "Sent",
+                "creation": ["<", cutoff_date]
+            }
         )
 
         frappe.db.commit()

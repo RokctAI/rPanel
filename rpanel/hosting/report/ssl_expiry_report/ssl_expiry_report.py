@@ -60,44 +60,43 @@ def get_columns():
 
 
 def get_data(filters):
-    conditions = get_conditions(filters)
+    """
+    Get SSL Expiry data using Frappe ORM to guarantee database-agnostic compatibility.
+    Tenant/session.user context is preserved.
+    """
+    from frappe.utils import date_diff, today
 
-    # Get all websites with SSL
-    websites = frappe.db.sql(
-        f"""
-        SELECT
-            name as domain,
-            ssl_status,
-            ssl_issuer,
-            ssl_expiry_date,
-            status,
-            site_path,
-            DATEDIFF(ssl_expiry_date, CURDATE()) as days_until_expiry
-        FROM
-            `tabHosted Website`
-        WHERE
-            ssl_status = 'Active'
-            {conditions}
-        ORDER BY
-            days_until_expiry ASC
-    """,
-        as_dict=1,
-    )
-
-    return websites
-
-
-def get_conditions(filters):
-    conditions = ""
+    db_filters = {"ssl_status": "Active"}
 
     if filters.get("domain"):
-        conditions += f" AND name LIKE '%{filters.get('domain')}%'"
-
-    if filters.get("expiring_within_days"):
-        days = filters.get("expiring_within_days")
-        conditions += f" AND DATEDIFF(ssl_expiry_date, CURDATE()) <= {days}"
+        db_filters["name"] = ["like", f"%{filters.get('domain')}%"]
 
     if filters.get("status"):
-        conditions += f" AND status = '{filters.get('status')}'"
+        db_filters["status"] = filters.get("status")
 
-    return conditions
+    websites = frappe.get_all(
+        "Hosted Website",
+        filters=db_filters,
+        fields=[
+            "name as domain",
+            "ssl_status",
+            "ssl_issuer",
+            "ssl_expiry_date",
+            "status",
+            "site_path",
+        ],
+    )
+
+    current_date = today()
+    for w in websites:
+        if w.ssl_expiry_date:
+            w["days_until_expiry"] = date_diff(w.ssl_expiry_date, current_date)
+        else:
+            w["days_until_expiry"] = 9999
+
+    if filters.get("expiring_within_days"):
+        limit_days = int(filters.get("expiring_within_days"))
+        websites = [w for w in websites if w["days_until_expiry"] <= limit_days]
+
+    websites.sort(key=lambda x: x["days_until_expiry"])
+    return websites

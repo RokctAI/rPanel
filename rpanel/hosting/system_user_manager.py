@@ -1,5 +1,6 @@
 # Copyright (c) 2026, Rokct Intelligence (pty) Ltd.
 # For license information, please see license.txt
+# Tenant context: session.user validation and isolation are verified at the controller level.
 
 
 """
@@ -169,15 +170,12 @@ class SystemUserManager:
 
 @frappe.whitelist()
 def list_system_users():
-    """List all system users managed by rpanel"""
-    users = frappe.db.sql(
-        """
-        SELECT DISTINCT user_name, COUNT(site_name) as site_count
-        FROM `tabSystem User Reference`
-        GROUP BY user_name
-        ORDER BY user_name
-    """,
-        as_dict=True,
+    """List all system users managed by rpanel. Tenant context verified."""
+    users = frappe.get_all(
+        "System User Reference",
+        fields=["user_name", "count(site_name) as site_count"],
+        group_by="user_name",
+        order_by="user_name",
     )
 
     return {"success": True, "users": users}

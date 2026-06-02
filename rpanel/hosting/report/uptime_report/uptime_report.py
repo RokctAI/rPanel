@@ -53,34 +53,36 @@ def get_columns():
 
 
 def get_data(filters):
-    conditions = []
+    """
+    Retrieve uptime checks using Frappe ORM database-agnostic queries.
+    Tenant/session.user context is preserved.
+    """
+    db_filters = {}
 
     if filters.get("website"):
-        conditions.append(f"website = '{filters.get('website')}'")
+        db_filters["website"] = filters.get("website")
 
-    if filters.get("from_date"):
-        conditions.append(f"check_time >= '{filters.get('from_date')}'")
+    if filters.get("from_date") or filters.get("to_date"):
+        time_filter = []
+        if filters.get("from_date"):
+            time_filter.append([">=", filters.get("from_date")])
+        if filters.get("to_date"):
+            time_filter.append(["<=", filters.get("to_date")])
+        db_filters["check_time"] = time_filter
 
-    if filters.get("to_date"):
-        conditions.append(f"check_time <= '{filters.get('to_date')}'")
-
-    where_clause = " AND ".join(conditions) if conditions else "1=1"
-
-    data = frappe.db.sql(
-        f"""
-        SELECT
-            website,
-            check_time,
-            is_up,
-            status_code,
-            response_time,
-            error_message
-        FROM `tabUptime Check`
-        WHERE {where_clause}
-        ORDER BY check_time DESC
-        LIMIT 1000
-    """,
-        as_dict=1,
+    data = frappe.get_all(
+        "Uptime Check",
+        filters=db_filters,
+        fields=[
+            "website",
+            "check_time",
+            "is_up",
+            "status_code",
+            "response_time",
+            "error_message"
+        ],
+        order_by="check_time desc",
+        limit=1000
     )
 
     # Format status

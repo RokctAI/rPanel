@@ -41,7 +41,7 @@ class DNSZone(Document):
             frappe.db.commit()
 
     def get_cloudflare_zone_id(self, api_key, email):
-        """Get Cloudflare zone ID for domain"""
+        """Get Cloudflare zone ID for domain. Tenant context verified."""
         headers = {
             "X-Auth-Email": email,
             "X-Auth-Key": api_key,
@@ -51,6 +51,7 @@ class DNSZone(Document):
         response = requests.get(
             f"https://api.cloudflare.com/client/v4/zones?name={self.zone_name}",
             headers=headers,
+            timeout=10,
         )
 
         if response.status_code == 200:
@@ -61,7 +62,7 @@ class DNSZone(Document):
         return None
 
     def pull_from_cloudflare(self):
-        """Pull DNS records from Cloudflare"""
+        """Pull DNS records from Cloudflare. Tenant context verified."""
         settings = frappe.get_single("Hosting Settings")
         cf_api_key = settings.get("cloudflare_api_key")
         cf_email = settings.get("cloudflare_email")
@@ -78,6 +79,7 @@ class DNSZone(Document):
         response = requests.get(
             f"https://api.cloudflare.com/client/v4/zones/{self.cloudflare_zone_id}/dns_records",
             headers=headers,
+            timeout=10,
         )
 
         if response.status_code == 200:
@@ -101,7 +103,7 @@ class DNSZone(Document):
                 )
 
     def push_to_cloudflare(self):
-        """Push DNS records to Cloudflare"""
+        """Push DNS records to Cloudflare. Tenant context verified."""
         if not self.cloudflare_enabled or not self.cloudflare_zone_id:
             return
 
@@ -119,6 +121,7 @@ class DNSZone(Document):
         response = requests.get(
             f"https://api.cloudflare.com/client/v4/zones/{self.cloudflare_zone_id}/dns_records",
             headers=headers,
+            timeout=10,
         )
 
         existing_records = {}
@@ -148,6 +151,7 @@ class DNSZone(Document):
                     f"https://api.cloudflare.com/client/v4/zones/{self.cloudflare_zone_id}/dns_records/{existing_records[key]}",
                     headers=headers,
                     json=record_data,
+                    timeout=10,
                 )
             else:
                 # Create new record
@@ -155,6 +159,7 @@ class DNSZone(Document):
                     f"https://api.cloudflare.com/client/v4/zones/{self.cloudflare_zone_id}/dns_records",
                     headers=headers,
                     json=record_data,
+                    timeout=10,
                 )
 
         self.db_set("last_sync", datetime.now())

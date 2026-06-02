@@ -323,7 +323,7 @@ class HostedWebsite(Document):
         import requests
 
         try:
-            salts = requests.get("https://api.wordpress.org/secret-key/1.1/salt/").text
+            salts = requests.get("https://api.wordpress.org/secret-key/1.1/salt/", timeout=10).text
         except requests.RequestException:
             salts = ""
             # Log warning

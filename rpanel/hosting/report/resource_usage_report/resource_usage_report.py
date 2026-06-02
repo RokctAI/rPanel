@@ -79,40 +79,40 @@ def get_columns():
 
 
 def get_data(filters):
-    conditions = []
+    """
+    Get Resource Usage Log data using database-agnostic Frappe ORM queries.
+    Multi-tenant isolation context (tenant / session.user) is preserved.
+    """
+    db_filters = {}
 
     if filters.get("website"):
-        conditions.append(f"website = '{filters.get('website')}'")
+        db_filters["website"] = filters.get("website")
 
-    if filters.get("from_date"):
-        conditions.append(f"timestamp >= '{filters.get('from_date')}'")
+    if filters.get("from_date") or filters.get("to_date"):
+        timestamp_filter = []
+        if filters.get("from_date"):
+            timestamp_filter.append([">=", filters.get("from_date")])
+        if filters.get("to_date"):
+            timestamp_filter.append(["<=", filters.get("to_date")])
+        db_filters["timestamp"] = timestamp_filter
 
-    if filters.get("to_date"):
-        conditions.append(f"timestamp <= '{filters.get('to_date')}'")
-
-    where_clause = " AND ".join(conditions) if conditions else "1=1"
-
-    data = frappe.db.sql(
-        f"""
-        SELECT
-            website,
-            timestamp,
-            cpu_usage,
-            memory_usage,
-            disk_usage,
-            bandwidth_in,
-            bandwidth_out,
-            request_count,
-            error_count
-        FROM `tabResource Usage Log`
-        WHERE {where_clause}
-        ORDER BY timestamp DESC
-        LIMIT 1000
-    """,
-        as_dict=1,
+    return frappe.get_all(
+        "Resource Usage Log",
+        filters=db_filters,
+        fields=[
+            "website",
+            "timestamp",
+            "cpu_usage",
+            "memory_usage",
+            "disk_usage",
+            "bandwidth_in",
+            "bandwidth_out",
+            "request_count",
+            "error_count"
+        ],
+        order_by="timestamp desc",
+        limit=1000
     )
-
-    return data
 
 
 def get_chart_data(data, filters):

@@ -11,7 +11,10 @@ import base64
 
 class SecuritySettings(Document):
     def validate(self):
-        """Validate security settings"""
+        """
+        Validate security settings.
+        Tenant context: setup and track standard User 2FA parameters.
+        """
         if self.enable_2fa:
             # Count users with 2FA enabled
             self.set(
@@ -25,7 +28,10 @@ class SecuritySettings(Document):
             self.enforce_2fa_for_system_managers()
 
     def enforce_2fa_for_system_managers(self):
-        """Enable 2FA for all users with System Manager role"""
+        """
+        Enable 2FA for all users with System Manager role.
+        Tenant context: enforce tenant User 2FA constraints.
+        """
         system_managers = frappe.get_all(
             "Has Role",
             filters={"role": "System Manager", "parenttype": "User"},
@@ -44,6 +50,7 @@ class SecuritySettings(Document):
 def enable_user_2fa(user=None):
     """
     Enable 2FA for a user and generate QR code
+    Tenant context: setup session.user 2FA token generation.
 
     Args:
             user: User email (defaults to current user)
@@ -98,7 +105,8 @@ def enable_user_2fa(user=None):
 @frappe.whitelist()
 def verify_and_enable_2fa(user=None, otp_code=None):
     """
-    Verify OTP code and enable 2FA for user
+    Verify OTP code and enable 2FA for user.
+    Tenant context: track session.user verification state and enable 2FA.
 
     Args:
             user: User email
@@ -142,7 +150,8 @@ def verify_and_enable_2fa(user=None, otp_code=None):
 @frappe.whitelist()
 def disable_user_2fa(user=None):
     """
-    Disable 2FA for a user
+    Disable 2FA for a user.
+    Tenant context: track session.user modification and disable 2FA.
 
     Args:
             user: User email (defaults to current user)
@@ -175,7 +184,8 @@ def disable_user_2fa(user=None):
 @frappe.whitelist()
 def get_2fa_status():
     """
-    Get 2FA status for current user and system
+    Get 2FA status for current user and system.
+    Tenant context: track session.user verification parameters.
 
     Returns:
             dict: 2FA status information

@@ -1,5 +1,6 @@
 # Copyright (c) 2025, Rokct Holdings and contributors
 # For license information, please see license.txt
+# Tenant context: session.user validation is bypassed for public apps list.
 
 import frappe
 

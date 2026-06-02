@@ -265,7 +265,7 @@ backup.create_backup()
 
 ## 🏗️ Architecture
 
-```
+```text
 RPanel
 ├── Hosting Module
 │   ├── Doctypes

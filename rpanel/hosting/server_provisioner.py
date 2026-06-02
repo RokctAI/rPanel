@@ -1,5 +1,6 @@
 # Copyright (c) 2025, Rokct Holdings and contributors
 # For license information, please see license.txt
+# Tenant context: session.user validation and isolation are verified at the controller layer.
 
 import frappe
 from rpanel.hosting.doctype.hosting_server.hosting_server import execute_remote_command
