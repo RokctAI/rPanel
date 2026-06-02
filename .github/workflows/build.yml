@@ -154,7 +154,7 @@ jobs:
 
 
       - name: Log in to GHCR
-        uses: docker/login-action@v2
+        uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -182,7 +182,7 @@ jobs:
           timeout 30s bash -c "until pg_isready -h 127.0.0.1 -p 5432 -U postgres; do echo 'Waiting for PostgreSQL...'; sleep 2; done"
 
       - name: Build and Push Control Hub (Full)
-        uses: docker/build-push-action@v4
+        uses: docker/build-push-action@v6
         with:
           context: docker-context
           file: docker-context/Dockerfile
@@ -198,7 +198,7 @@ jobs:
             DB_HOST=127.0.0.1
 
       - name: Build and Push Tenant Spoke (Tenant)
-        uses: docker/build-push-action@v4
+        uses: docker/build-push-action@v6
         with:
           context: docker-context
           file: docker-context/Dockerfile
@@ -214,7 +214,7 @@ jobs:
             DB_HOST=127.0.0.1
 
       - name: Build and Push IoT Spoke (IoT)
-        uses: docker/build-push-action@v4
+        uses: docker/build-push-action@v6
         with:
           context: docker-context
           file: docker-context/Dockerfile
@@ -230,7 +230,7 @@ jobs:
             DB_HOST=127.0.0.1
 
       - name: Build and Push Postgres (Custom)
-        uses: docker/build-push-action@v4
+        uses: docker/build-push-action@v6
         with:
           context: docker-context
           file: docker-context/postgres.Dockerfile
