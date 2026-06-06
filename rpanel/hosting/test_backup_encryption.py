@@ -7,6 +7,7 @@ except ImportError:
     frappe = None
 
 
+
 class TestBackupEncryption(unittest.TestCase):
     def test_encryption_placeholder(self):
         """Placeholder unit test to verify backup encryption logic. Tenant context verified."""
