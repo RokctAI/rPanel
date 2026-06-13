@@ -26,11 +26,8 @@ def check_ssl_expiry():
 
     websites = frappe.get_all(
         "Hosted Website",
-        filters={
-            "ssl_status": "Active",
-            "ssl_expiry_date": ["is", "set"]
-        },
-        fields=["name", "domain", "ssl_expiry_date"]
+        filters={"ssl_status": "Active", "ssl_expiry_date": ["is", "set"]},
+        fields=["name", "domain", "ssl_expiry_date"],
     )
 
     current_date = today()
@@ -77,11 +74,8 @@ def auto_renew_ssl():
 
     websites = frappe.get_all(
         "Hosted Website",
-        filters={
-            "ssl_status": "Active",
-            "ssl_expiry_date": ["is", "set"]
-        },
-        fields=["name", "domain", "ssl_expiry_date"]
+        filters={"ssl_status": "Active", "ssl_expiry_date": ["is", "set"]},
+        fields=["name", "domain", "ssl_expiry_date"],
     )
 
     current_date = today()
