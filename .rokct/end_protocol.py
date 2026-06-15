@@ -29,8 +29,8 @@ def file_hash(path: Path):
 def load_json_remote(name: str) -> dict:
     url = f"{GITHUB_RAW_BASE}/{name}"
     try:
-        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
-        with urllib.request.urlopen(req) as r:
+        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0", "X-Trace-Id": "agent-http"})
+        with urllib.request.urlopen(req, timeout=10) as r:
             return json.loads(r.read().decode())
     except Exception:
         return {}
@@ -62,10 +62,10 @@ def main():
     workflows_dir = ROKCT_DIR / "workflows"
     if workflows_dir.is_dir():
         for f in workflows_dir.iterdir():
-            if f.is_file() and f.name != "reinit_protocol.md":
+            if f.is_file() and f.name != "init_protocol.md":
                 f.unlink()
                 print(f"[end] Deleted workflow: {f.name}")
-        print("[end] Cleaned workflows/ (kept reinit_protocol.md)")
+        print("[end] Cleaned workflows/ (kept init_protocol.md)")
 
     for item_path in ROKCT_DIR.iterdir():
         if item_path.name in ("active_session.txt", "initiate.py"):
@@ -74,6 +74,10 @@ def main():
         if item_path.name == ".sync_ready":
             continue
         if item_path.is_dir():
+            if item_path.name in ("workflows", "agent", "evidence", "images"):
+                continue
+            shutil.rmtree(item_path)
+            print(f"[end] Deleted directory: {item_path.name}")
             continue
         core_key = f"core/templates/{item_path.name}"
         local_rel = f"profiles/local/{item_path.name}"
@@ -94,4 +98,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
