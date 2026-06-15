@@ -323,7 +323,7 @@ class HostedWebsite(Document):
         import requests
 
         try:
-            salts = requests.get("https://api.wordpress.org/secret-key/1.1/salt/", timeout=10).text
+            salts = requests.get("https://api.wordpress.org/secret-key/1.1/salt/", timeout=10, headers={"X-Trace-Id": (getattr(getattr(__import__("frappe"), "local", None), "trace_id", None) or __import__("uuid").uuid4().hex)}).text
         except requests.RequestException:
             salts = ""
             # Log warning

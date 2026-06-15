@@ -16,7 +16,8 @@ class HetznerVPSProvider(VPSProvider):
 		self.api_url = "https://api.hetzner.cloud/v1"
 		self.headers = {
 			"Authorization": f"Bearer {self.token}",
-			"Content-Type": "application/json"
+			"Content-Type": "application/json",
+			"X-Trace-Id": (getattr(getattr(__import__("frappe"), "local", None), "trace_id", None) or __import__("uuid").uuid4().hex)
 		}
 
 	def create_vps(self, plan_code: str, site_name: str, **kwargs) -> dict:

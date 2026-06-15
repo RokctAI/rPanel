@@ -153,7 +153,7 @@ def check_site_health():
             url = f"{protocol}://{site.domain}"
 
             # nosec B501 — internal health check
-            response = requests.get(url, timeout=10, verify=False)
+            response = requests.get(url, timeout=10, verify=False, headers={"X-Trace-Id": (getattr(getattr(__import__("frappe"), "local", None), "trace_id", None) or __import__("uuid").uuid4().hex)})
 
             if response.status_code >= 500:
                 # Server error - log it
