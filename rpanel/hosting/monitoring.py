@@ -65,11 +65,12 @@ def get_resource_usage(website_name: str, period: str="24h") -> dict:
 
 
 @frappe.whitelist()
-def get_uptime_stats(website_name: str, period: str="7d") -> dict:
+def get_uptime_stats(website_name: str, period: str = "7d") -> dict:
     """Get uptime statistics for a website"""
-
+    sys.stderr.write(f"[TRACE] get_uptime_stats trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n")
     # Parse period
     hours = parse_period(period)
+
     start_time = datetime.now() - timedelta(hours=hours)
 
     # Get uptime checks
@@ -106,10 +107,11 @@ def get_uptime_stats(website_name: str, period: str="7d") -> dict:
 
 
 @frappe.whitelist()
-def get_bandwidth_usage(website_name, period="30d"):
+def get_bandwidth_usage(website_name: str, period: str = "30d") -> dict:
     """Get bandwidth usage over time"""
-
+    sys.stderr.write(f"[TRACE] get_bandwidth_usage trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n")
     hours = parse_period(period)
+
     start_time = datetime.now() - timedelta(hours=hours)
 
     logs = frappe.get_all(
@@ -131,10 +133,11 @@ def get_bandwidth_usage(website_name, period="30d"):
 
 
 @frappe.whitelist()
-def check_disk_space(website_name):
+def check_disk_space(website_name: str) -> dict:
     """Check disk space usage for a website"""
-
+    sys.stderr.write(f"[TRACE] check_disk_space trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n")
     website = frappe.get_doc("Hosted Website", website_name)
+
 
     try:
         # Get disk usage using du command (Security: Use list)
@@ -158,10 +161,11 @@ def check_disk_space(website_name):
 
 
 @frappe.whitelist()
-def get_error_logs(website_name, limit=100):
+def get_error_logs(website_name: str, limit: int = 100) -> dict:
     """Get recent error logs from Nginx"""
-
+    sys.stderr.write(f"[TRACE] get_error_logs trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n")
     website = frappe.get_doc("Hosted Website", website_name)
+
     settings = frappe.get_single("Hosting Settings")  # noqa: F841
 
     # Construct error log path
@@ -184,10 +188,11 @@ def get_error_logs(website_name, limit=100):
 
 
 @frappe.whitelist()
-def set_alert_threshold(website_name, metric, threshold):
+def set_alert_threshold(website_name: str, metric: str, threshold: float) -> dict:
     """Set alert threshold for a metric"""
-
+    sys.stderr.write(f"[TRACE] set_alert_threshold trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n")
     # Store in website custom fields or separate doctype
+
     website = frappe.get_doc("Hosted Website", website_name)
 
     # For now, store in notes field (can be enhanced with custom fields)

@@ -36,8 +36,9 @@ def get_nginx_access_log(website_name: str, lines: str=100) -> dict:
 
 
 @frappe.whitelist()
-def get_nginx_error_log(website_name: str, lines: str=100) -> dict:
+def get_nginx_error_log(website_name: str, lines: int = 100) -> dict:
     """Get Nginx error log for a website"""
+    sys.stderr.write(f"[TRACE] get_nginx_error_log trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n")
     if website_name == "local_control_site":
         if "System Manager" not in frappe.get_roles():
             frappe.throw("Access Denied")
@@ -51,8 +52,9 @@ def get_nginx_error_log(website_name: str, lines: str=100) -> dict:
 
 
 @frappe.whitelist()
-def get_php_error_log(website_name, lines=100):
+def get_php_error_log(website_name: str, lines: int = 100) -> dict:
     """Get PHP error log for a website"""
+    sys.stderr.write(f"[TRACE] get_php_error_log trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n")
     if website_name == "local_control_site":
         if "System Manager" not in frappe.get_roles():
             frappe.throw("Access Denied")
@@ -66,8 +68,9 @@ def get_php_error_log(website_name, lines=100):
 
 
 @frappe.whitelist()
-def get_application_log(website_name, log_type="debug", lines=100):
+def get_application_log(website_name: str, log_type: str = "debug", lines: int = 100) -> dict:
     """Get application-specific logs (WordPress, Laravel, etc.)"""
+    sys.stderr.write(f"[TRACE] get_application_log trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n")
     if website_name == "local_control_site":
         if "System Manager" not in frappe.get_roles():
             frappe.throw("Access Denied")
@@ -87,10 +90,11 @@ def get_application_log(website_name, log_type="debug", lines=100):
 
 
 @frappe.whitelist()
-def search_logs(website_name, log_type, search_term, lines=500):
+def search_logs(website_name: str, log_type: str, search_term: str, lines: int = 500) -> dict:
     """Search logs for specific term"""
-
+    sys.stderr.write(f"[TRACE] search_logs trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n")
     # Get appropriate log file
+
     if log_type == "nginx_access":
         result = get_nginx_access_log(website_name, lines)
     elif log_type == "nginx_error":
@@ -116,10 +120,11 @@ def search_logs(website_name, log_type, search_term, lines=500):
 
 
 @frappe.whitelist()
-def tail_log(website_name, log_type, since_timestamp=None):  # noqa: C901
+def tail_log(website_name: str, log_type: str, since_timestamp: str = None) -> dict:  # noqa: C901
     """Get new log entries since timestamp (for live updates)"""
-
+    sys.stderr.write(f"[TRACE] tail_log trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n")
     # Get log file path
+
     if website_name == "local_control_site":
         if "System Manager" not in frappe.get_roles():
             frappe.throw("Access Denied")
@@ -179,8 +184,9 @@ def tail_log(website_name, log_type, since_timestamp=None):  # noqa: C901
 
 
 @frappe.whitelist()
-def download_log(website_name, log_type):
+def download_log(website_name: str, log_type: str) -> dict:
     """Download complete log file"""
+    sys.stderr.write(f"[TRACE] download_log trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n")
     website = frappe.get_doc("Hosted Website", website_name)
 
     if log_type == "nginx_access":
@@ -204,8 +210,9 @@ def download_log(website_name, log_type):
 
 
 @frappe.whitelist()
-def clear_log(website_name, log_type):
+def clear_log(website_name: str, log_type: str) -> dict:
     """Clear log file"""
+    sys.stderr.write(f"[TRACE] clear_log trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n")
     website = frappe.get_doc("Hosted Website", website_name)
 
     if log_type == "nginx_access":
@@ -233,10 +240,11 @@ def clear_log(website_name, log_type):
 
 
 @frappe.whitelist()
-def get_log_stats(website_name):
+def get_log_stats(website_name: str) -> dict:
     """Get statistics about all logs"""
-
+    sys.stderr.write(f"[TRACE] get_log_stats trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n")
     stats = {}
+
 
     if website_name == "local_control_site":
         if "System Manager" not in frappe.get_roles():

@@ -4,15 +4,25 @@
 
 import frappe
 import os
+import sys
 import shutil
 import subprocess
 import shlex
 from rpanel.hosting.mysql_utils import run_mysql_command
 
+def _safe_path(base: str, untrusted: str) -> str:
+    """Validate that resolved path stays within base directory (Layer 18 ZTNA)."""
+    resolved = os.path.realpath(os.path.join(base, untrusted))
+    base_real = os.path.realpath(base)
+    if not resolved.startswith(base_real + os.sep) and resolved != base_real:
+        raise ValueError(f"Path traversal blocked: {untrusted!r}")
+    return resolved
+
 
 @frappe.whitelist()
-def import_wordpress(website_name, source_path):
+def import_wordpress(website_name: str, source_path: str) -> dict:
     """Import WordPress site from ZIP or directory"""
+    sys.stderr.write(f"[TRACE] import_wordpress trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n")
     website = frappe.get_doc("Hosted Website", website_name)
 
     try:
@@ -35,8 +45,9 @@ def import_wordpress(website_name, source_path):
 
 
 @frappe.whitelist()
-def export_wordpress(website_name, include_uploads=True):
+def export_wordpress(website_name: str, include_uploads: bool = True) -> dict:
     """Export WordPress site to ZIP"""
+    sys.stderr.write(f"[TRACE] export_wordpress trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n")
     website = frappe.get_doc("Hosted Website", website_name)
 
     try:
@@ -54,8 +65,9 @@ def export_wordpress(website_name, include_uploads=True):
 
 
 @frappe.whitelist()
-def search_replace_db(website_name, search, replace):
+def search_replace_db(website_name: str, search: str, replace: str) -> dict:
     """Search and replace in WordPress database"""
+    sys.stderr.write(f"[TRACE] search_replace_db trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n")
     website = frappe.get_doc("Hosted Website", website_name)
 
     try:
@@ -149,8 +161,9 @@ echo "Search-replace completed via PHP Bridge\\n";
 
 
 @frappe.whitelist()
-def install_wp_plugin(website_name, plugin_slug):
+def install_wp_plugin(website_name: str, plugin_slug: str) -> dict:
     """Install WordPress plugin"""
+    sys.stderr.write(f"[TRACE] install_wp_plugin trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n")
     website = frappe.get_doc("Hosted Website", website_name)
 
     try:
@@ -163,8 +176,9 @@ def install_wp_plugin(website_name, plugin_slug):
 
 
 @frappe.whitelist()
-def update_wordpress(website_name):
+def update_wordpress(website_name: str) -> dict:
     """Update WordPress core"""
+    sys.stderr.write(f"[TRACE] update_wordpress trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n")
     website = frappe.get_doc("Hosted Website", website_name)
 
     try:
@@ -177,8 +191,9 @@ def update_wordpress(website_name):
 
 
 @frappe.whitelist()
-def get_wp_info(website_name):
+def get_wp_info(website_name: str) -> dict:
     """Get WordPress installation info"""
+    sys.stderr.write(f"[TRACE] get_wp_info trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n")
     website = frappe.get_doc("Hosted Website", website_name)
 
     try:
@@ -195,15 +210,6 @@ def get_wp_info(website_name):
         )
 
         import json
-
-def _safe_path(base: str, untrusted: str) -> str:
-    """Validate that resolved path stays within base directory (Layer 18 ZTNA)."""
-    resolved = os.path.realpath(os.path.join(base, untrusted))
-    base_real = os.path.realpath(base)
-    if not resolved.startswith(base_real + os.sep) and resolved != base_real:
-        raise ValueError(f"Path traversal blocked: {untrusted!r}")
-    return resolved
-
 
         plugins = (
             json.loads(plugins_result.stdout) if plugins_result.returncode == 0 else []

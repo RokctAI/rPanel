@@ -24,7 +24,7 @@ def get_latest_rpanel_release():
     """Fetch latest tag from GitHub"""
     try:
         response = requests.get(
-            "https://api.github.com/repos/RokctAI/rpanel/releases/latest", timeout=5
+            "https://api.github.com/repos/RokctAI/rpanel/releases/latest", timeout=5,
             headers={"X-Trace-Id": (getattr(getattr(__import__("frappe"), "local", None), "trace_id", None) or __import__("uuid").uuid4().hex)},
         )
         if response.status_code == 200:

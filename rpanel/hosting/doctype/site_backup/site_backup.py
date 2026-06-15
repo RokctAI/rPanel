@@ -3,6 +3,7 @@
 # Tenant context: session.user validation and isolation are verified at the controller level.
 
 import frappe
+import sys
 from frappe.model.document import Document
 import os
 import subprocess
@@ -292,17 +293,6 @@ class SiteBackup(Document):
         subprocess.run(shlex.split(cmd), check=True)
 
 
-@frappe.whitelist()
-def create_backup(
-    website, backup_type="Full", upload_to_cloud=False, cloud_storage="None"
-):
-    """Create a new backup"""
-    if website == "local_control_site":
-        if "System Manager" not in frappe.get_roles():
-            frappe.throw("Access Denied")
-        # Trigger standard bench backup
-        from frappe.utils.backups import new_backup
-
 def _safe_path(base: str, untrusted: str) -> str:
     """Validate that resolved path stays within base directory (Layer 18 ZTNA)."""
     resolved = os.path.realpath(os.path.join(base, untrusted))
@@ -312,7 +302,20 @@ def _safe_path(base: str, untrusted: str) -> str:
     return resolved
 
 
+@frappe.whitelist()
+def create_backup(
+    website: str, backup_type: str = "Full", upload_to_cloud: bool = False, cloud_storage: str = "None"
+) -> dict:
+    """Create a new backup"""
+    sys.stderr.write(f"[TRACE] create_backup trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n")
+    if website == "local_control_site":
+        if "System Manager" not in frappe.get_roles():
+            frappe.throw("Access Denied")
+        # Trigger standard bench backup
+        from frappe.utils.backups import new_backup
+
         new_backup(ignore_conf=False, force=True, verbose=False)
+        return {"success": True, "message": "Backup started in background"}
         return {"success": True, "message": "Backup started in background"}
 
     backup = frappe.get_doc(

@@ -3,15 +3,25 @@
 # Tenant context: session.user validation and isolation are verified at the controller level.
 
 import frappe
+import sys
 from datetime import datetime
 import smtplib
 import subprocess
 import os
 
+def _safe_path(base: str, untrusted: str) -> str:
+    """Validate that resolved path stays within base directory (Layer 18 ZTNA)."""
+    resolved = os.path.realpath(os.path.join(base, untrusted))
+    base_real = os.path.realpath(base)
+    if not resolved.startswith(base_real + os.sep) and resolved != base_real:
+        raise ValueError(f"Path traversal blocked: {untrusted!r}")
+    return resolved
+
 
 @frappe.whitelist()
-def get_email_queue():
+def get_email_queue() -> dict:
     """Get email queue status"""
+    sys.stderr.write(f"[TRACE] get_email_queue trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n")
     try:
         # Get pending emails from Frappe's email queue
         queue = frappe.get_all(
@@ -28,8 +38,9 @@ def get_email_queue():
 
 
 @frappe.whitelist()
-def test_smtp(smtp_server, smtp_port, username, password, use_tls=True):
+def test_smtp(smtp_server: str, smtp_port: int, username: str, password: str, use_tls: bool = True) -> dict:
     """Test SMTP connection"""
+    sys.stderr.write(f"[TRACE] test_smtp trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n")
     try:
         if use_tls:
             server = smtplib.SMTP(smtp_server, smtp_port)
@@ -46,8 +57,9 @@ def test_smtp(smtp_server, smtp_port, username, password, use_tls=True):
 
 
 @frappe.whitelist()
-def get_email_logs(limit=100):
+def get_email_logs(limit: int = 100) -> dict:
     """Get email delivery logs"""
+    sys.stderr.write(f"[TRACE] get_email_logs trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n")
     try:
         logs = frappe.get_all(
             "Email Queue",
@@ -71,8 +83,9 @@ def get_email_logs(limit=100):
 
 
 @frappe.whitelist()
-def retry_failed_emails():
+def retry_failed_emails() -> dict:
     """Retry sending failed emails"""
+    sys.stderr.write(f"[TRACE] retry_failed_emails trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n")
     try:
         failed_emails = frappe.get_all(
             "Email Queue", filters={"status": "Error"}, fields=["name"]
@@ -97,9 +110,10 @@ def retry_failed_emails():
 
 @frappe.whitelist()
 def send_test_email(
-    recipient, subject="Test Email", body="This is a test email from ROKCT Hosting"
-):
+    recipient: str, subject: str = "Test Email", body: str = "This is a test email from ROKCT Hosting"
+) -> dict:
     """Send test email"""
+    sys.stderr.write(f"[TRACE] send_test_email trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n")
     try:
         frappe.sendmail(recipients=recipient, subject=subject, message=body)
 
@@ -109,8 +123,9 @@ def send_test_email(
 
 
 @frappe.whitelist()
-def get_email_stats():
+def get_email_stats() -> dict:
     """Get email statistics"""
+    sys.stderr.write(f"[TRACE] get_email_stats trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n")
     try:
         # Get counts by status
         stats = {}
@@ -132,8 +147,9 @@ def get_email_stats():
 
 
 @frappe.whitelist()
-def clear_email_queue():
+def clear_email_queue() -> dict:
     """Clear old sent emails from queue. Tenant context verified."""
+    sys.stderr.write(f"[TRACE] clear_email_queue trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n")
     try:
         # Delete emails older than 30 days
         from datetime import timedelta
@@ -156,8 +172,9 @@ def clear_email_queue():
 
 
 @frappe.whitelist()
-def generate_dkim_keys(domain, selector="default"):
+def generate_dkim_keys(domain: str, selector: str = "default") -> dict:
     """Generate DKIM keys for a domain using opendkim-genkey"""
+    sys.stderr.write(f"[TRACE] generate_dkim_keys trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n")
     try:
         # Create directory for keys if it doesn't exist
         key_dir = f"/etc/opendkim/keys/{domain}"
@@ -206,20 +223,12 @@ def generate_dkim_keys(domain, selector="default"):
 
 
 @frappe.whitelist()
-def get_spf_record(domain, ip_address=None):
+def get_spf_record(domain: str, ip_address: str = None) -> dict:
     """Generate SPF record for a domain"""
+    sys.stderr.write(f"[TRACE] get_spf_record trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n")
     if not ip_address:
         # Try to get server IP
         import socket
-
-def _safe_path(base: str, untrusted: str) -> str:
-    """Validate that resolved path stays within base directory (Layer 18 ZTNA)."""
-    resolved = os.path.realpath(os.path.join(base, untrusted))
-    base_real = os.path.realpath(base)
-    if not resolved.startswith(base_real + os.sep) and resolved != base_real:
-        raise ValueError(f"Path traversal blocked: {untrusted!r}")
-    return resolved
-
 
         try:
             ip_address = socket.gethostbyname(socket.gethostname())
@@ -234,8 +243,9 @@ def _safe_path(base: str, untrusted: str) -> str:
 
 
 @frappe.whitelist()
-def get_dmarc_record(domain, policy="none", email=None):
+def get_dmarc_record(domain: str, policy: str = "none", email: str = None) -> dict:
     """Generate DMARC record for a domain"""
+    sys.stderr.write(f"[TRACE] get_dmarc_record trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n")
     if not email:
         email = f"admin@{domain}"
 
