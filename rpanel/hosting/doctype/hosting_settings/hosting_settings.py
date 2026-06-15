@@ -1,11 +1,21 @@
 # Copyright (c) 2025, ROKCT Holdings and contributors
 # For license information, please see license.txt
 
+import sys
 import frappe
 from frappe.model.document import Document
 import subprocess
 import shlex
 import os
+
+def _safe_path(base: str, untrusted: str) -> str:
+    """Validate that resolved path stays within base directory (Layer 18 ZTNA)."""
+    resolved = os.path.realpath(os.path.join(base, untrusted))
+    base_real = os.path.realpath(base)
+    if not resolved.startswith(base_real + os.sep) and resolved != base_real:
+        raise ValueError(f"Path traversal blocked: {untrusted!r}")
+    return resolved
+
 
 
 class HostingSettings(Document):
@@ -180,8 +190,9 @@ $config['skin'] = 'elastic';
 
 
 @frappe.whitelist()
-def get_system_status():
+def get_system_status() -> dict:
     """Check status of system services"""
+    sys.stderr.write(f"[TRACE] get_system_status trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n")
     services = ["nginx", "mysql", "exim4"]
     status = {}
 
@@ -204,7 +215,7 @@ def get_system_status():
 
 
 @frappe.whitelist()
-def reload_nginx():
+def reload_nginx() -> dict:
     """Reload Nginx configuration"""
     try:
         subprocess.run(["sudo", "systemctl", "reload", "nginx"], check=True)

@@ -7,6 +7,7 @@ Backup Encryption Manager
 Handles GPG encryption/decryption of backups before uploading to cloud storage.
 """
 
+import sys
 import frappe
 import gnupg
 import os
@@ -231,14 +232,15 @@ def decrypt_backup(encrypted_file_path):
 
 
 @frappe.whitelist()
-def generate_encryption_key():
+def generate_encryption_key() -> dict:
     """Generate a new encryption key (whitelisted for UI)"""
+    sys.stderr.write(f"[TRACE] generate_encryption_key trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n")
     manager = BackupEncryptionManager()
     return manager.generate_encryption_key()
 
 
 @frappe.whitelist()
-def download_public_key():
+def download_public_key() -> dict:
     """Download public key (whitelisted for UI)"""
     manager = BackupEncryptionManager()
     public_key = manager.export_public_key()

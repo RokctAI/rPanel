@@ -2,6 +2,7 @@
 # For license information, please see license.txt
 # Tenant context: session.user validation and isolation are verified at the controller level.
 
+import sys
 import frappe
 import subprocess
 import shlex
@@ -9,8 +10,9 @@ from datetime import datetime
 
 
 @frappe.whitelist()
-def scan_for_malware(website_name):
+def scan_for_malware(website_name: str) -> dict:
     """Scan website for malware using ClamAV"""
+    sys.stderr.write(f"[TRACE] scan_for_malware trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n")
     website = frappe.get_doc("Hosted Website", website_name)
 
     try:
@@ -53,7 +55,7 @@ def scan_for_malware(website_name):
 
 
 @frappe.whitelist()
-def setup_fail2ban():
+def setup_fail2ban() -> dict:
     """Setup Fail2Ban for brute force protection"""
     try:
         # Check if Fail2Ban is installed

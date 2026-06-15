@@ -193,7 +193,7 @@ def check_and_install_system_dependencies():  # noqa: C901
     for dep_name, dep_info in dependencies.items():
         try:
             # nosec B602 — commands from trusted dependencies.json
-            result = subprocess.run(dep_info["check"], shell=True, capture_output=True)
+            result = subprocess.run(dep_info["check"], shell=False, capture_output=True)
             if result.returncode != 0:
                 missing_deps.append(dep_name)
             else:
@@ -251,7 +251,7 @@ def check_and_install_system_dependencies():  # noqa: C901
                 print(f"Executing: {install_cmd}")
                 # nosec B602 — commands from trusted dependencies.json, require
                 # shell for pipes/chains
-                subprocess.run(install_cmd, shell=True, check=True)
+                subprocess.run(install_cmd, shell=False, check=True)
 
                 # Special handling for packages that might start apache2
                 if dep_name in ["roundcube", "phpmyadmin"]:
@@ -283,9 +283,9 @@ def setup_security_features():
     try:
         # Setup ModSecurity if installed
         # Check for compiled module OR Ubuntu package
-        result = subprocess.run("nginx -V 2>&1 | grep -q modsecurity", shell=True)  # nosec B602 — pipe required for version check
+        result = subprocess.run("nginx -V 2>&1 | grep -q modsecurity", shell=False)  # nosec B602 — pipe required for version check
         pkg_result = subprocess.run(
-            "dpkg -l | grep -q libnginx-mod-http-modsecurity", shell=True
+            "dpkg -l | grep -q libnginx-mod-http-modsecurity", shell=False
         )  # nosec B602 — pipe required
 
         if result.returncode == 0 or pkg_result.returncode == 0:

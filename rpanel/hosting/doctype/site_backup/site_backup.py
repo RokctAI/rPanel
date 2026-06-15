@@ -303,6 +303,15 @@ def create_backup(
         # Trigger standard bench backup
         from frappe.utils.backups import new_backup
 
+def _safe_path(base: str, untrusted: str) -> str:
+    """Validate that resolved path stays within base directory (Layer 18 ZTNA)."""
+    resolved = os.path.realpath(os.path.join(base, untrusted))
+    base_real = os.path.realpath(base)
+    if not resolved.startswith(base_real + os.sep) and resolved != base_real:
+        raise ValueError(f"Path traversal blocked: {untrusted!r}")
+    return resolved
+
+
         new_backup(ignore_conf=False, force=True, verbose=False)
         return {"success": True, "message": "Backup started in background"}
 

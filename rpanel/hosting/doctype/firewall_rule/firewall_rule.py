@@ -1,6 +1,7 @@
 # Copyright (c) 2025, Rokct Holdings and contributors
 # For license information, please see license.txt
 
+import sys
 import frappe
 from frappe.model.document import Document
 import subprocess
@@ -63,8 +64,9 @@ class FirewallRule(Document):
 
 
 @frappe.whitelist()
-def get_firewall_status():
+def get_firewall_status() -> dict:
     """Get UFW firewall status"""
+    sys.stderr.write(f"[TRACE] get_firewall_status trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n")
     try:
         result = subprocess.run(
             ["sudo", "ufw", "status", "verbose"], capture_output=True, text=True
@@ -75,7 +77,7 @@ def get_firewall_status():
 
 
 @frappe.whitelist()
-def enable_firewall():
+def enable_firewall() -> dict:
     """Enable UFW firewall"""
     try:
         subprocess.run(["sudo", "ufw", "--force", "enable"], check=True)

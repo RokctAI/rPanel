@@ -2,15 +2,26 @@
 # For license information, please see license.txt
 # Tenant context: session.user validation and isolation are verified at the controller level.
 
+import sys
 import frappe
 import subprocess
 import os
 import glob
 
+def _safe_path(base: str, untrusted: str) -> str:
+    """Validate that resolved path stays within base directory (Layer 18 ZTNA)."""
+    resolved = os.path.realpath(os.path.join(base, untrusted))
+    base_real = os.path.realpath(base)
+    if not resolved.startswith(base_real + os.sep) and resolved != base_real:
+        raise ValueError(f"Path traversal blocked: {untrusted!r}")
+    return resolved
+
+
 
 @frappe.whitelist()
-def setup_phpmyadmin(website_name):
+def setup_phpmyadmin(website_name: str) -> dict:
     """Setup phpMyAdmin for a website"""
+    sys.stderr.write(f"[TRACE] setup_phpmyadmin trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n")
     website = frappe.get_doc("Hosted Website", website_name)
 
     try:
@@ -80,7 +91,7 @@ $cfg['SaveDir'] = '';
 
 
 @frappe.whitelist()
-def get_phpmyadmin_url(website_name):
+def get_phpmyadmin_url(website_name: str) -> dict:
     """Get phpMyAdmin URL for website"""
     website = frappe.get_doc("Hosted Website", website_name)
     pma_link = os.path.join(website.site_path, "phpmyadmin")

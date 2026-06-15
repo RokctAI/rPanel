@@ -1,6 +1,7 @@
 # Copyright (c) 2025, Rokct Holdings and contributors
 # For license information, please see license.txt
 
+import sys
 import frappe
 from frappe.model.document import Document
 import subprocess
@@ -84,8 +85,9 @@ class FTPAccount(Document):
 
 
 @frappe.whitelist()
-def get_ftp_logs(username, lines=50):
+def get_ftp_logs(username: str, lines: str=50) -> dict:
     """Get FTP connection logs for user"""
+    sys.stderr.write(f"[TRACE] get_ftp_logs trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n")
     try:
         # Pure Python file read — eliminates shell injection risk entirely
         log_path = "/var/log/vsftpd.log"
@@ -100,7 +102,7 @@ def get_ftp_logs(username, lines=50):
 
 
 @frappe.whitelist()
-def test_ftp_connection(username, password):
+def test_ftp_connection(username: str, password: str) -> dict:
     """Test FTP connection"""
     try:
         import ftplib  # nosec B402 — FTP is the intentional purpose of this module

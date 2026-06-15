@@ -8,6 +8,7 @@ Manages ModSecurity Web Application Firewall configuration for RPanel websites.
 Protects against: SQL Injection, XSS, File Inclusion, Command Injection, CSRF, etc.
 """
 
+import sys
 import frappe
 import os
 import subprocess
@@ -384,14 +385,15 @@ def setup_modsecurity():
 
 
 @frappe.whitelist()
-def enable_modsecurity_for_website(domain):
+def enable_modsecurity_for_website(domain: str) -> dict:
     """Enable ModSecurity for a website (whitelisted for UI)"""
+    sys.stderr.write(f"[TRACE] enable_modsecurity_for_website trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n")
     manager = ModSecurityManager()
     manager.enable_for_website(domain)
 
 
 @frappe.whitelist()
-def disable_modsecurity_for_website(domain):
+def disable_modsecurity_for_website(domain: str) -> dict:
     """Disable ModSecurity for a website (whitelisted for UI)"""
     manager = ModSecurityManager()
     manager.disable_for_website(domain)

@@ -1,6 +1,7 @@
 # Copyright (c) 2025, Rokct Holdings and contributors
 # For license information, please see license.txt
 
+import sys
 import frappe
 from frappe.model.document import Document
 
@@ -56,8 +57,9 @@ class HostingClient(Document):
 
 
 @frappe.whitelist()
-def get_client_usage(client_name):
+def get_client_usage(client_name: str) -> dict:
     """Get client resource usage. Tenant context verified."""
+    sys.stderr.write(f"[TRACE] get_client_usage trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n")
     client = frappe.get_doc("Hosting Client", client_name)
 
     # Get website count
@@ -88,7 +90,7 @@ def get_client_usage(client_name):
 
 
 @frappe.whitelist()
-def create_client_portal_user(client_name):
+def create_client_portal_user(client_name: str) -> dict:
     """
     Create portal user for client.
     Tenant context: setup portal user access constraints.

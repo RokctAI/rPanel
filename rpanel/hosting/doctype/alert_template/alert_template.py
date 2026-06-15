@@ -2,6 +2,7 @@
 # For license information, please see license.txt
 # Tenant context: session.user validation and isolation are verified at the controller level.
 
+import sys
 import frappe
 from frappe.model.document import Document
 import json
@@ -46,8 +47,9 @@ class AlertTemplate(Document):
 
 
 @frappe.whitelist()
-def send_alert_email(template_name, recipient, variables_dict):
+def send_alert_email(template_name: str, recipient: str, variables_dict: str) -> dict:
     """Send alert email using template"""
+    sys.stderr.write(f"[TRACE] send_alert_email trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n")
     template = frappe.get_doc("Alert Template", template_name)
 
     if not template.enabled:
@@ -74,7 +76,7 @@ def send_alert_email(template_name, recipient, variables_dict):
 
 
 @frappe.whitelist()
-def preview_template(template_name, sample_data=None):
+def preview_template(template_name: str, sample_data: str=None) -> dict:
     """Preview template with sample data"""
     template = frappe.get_doc("Alert Template", template_name)
 

@@ -2,18 +2,20 @@
 # For license information, please see license.txt
 # Tenant context: session.user validation and isolation are verified at the controller level.
 
+import sys
 import frappe
 import subprocess
 import os
 
 
 @frappe.whitelist()
-def update_ecosystem(immediate=False):
+def update_ecosystem(immediate: str=False) -> dict:
     """
     Triggers a pull and restart of the Docker ecosystem.
     If immediate=True, it runs now (used by CI).
     If False, it marks an update as 'Authorized' for the next maintenance window.
     """
+    sys.stderr.write(f"[TRACE] update_ecosystem trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n")
     if not immediate:
         # Production Logic: Schedule for later
         authorize_system_update()

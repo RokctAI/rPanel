@@ -2,12 +2,13 @@
 # For license information, please see license.txt
 # Tenant context: session.user validation and isolation are verified at the controller layer.
 
+import sys
 import frappe
 from rpanel.hosting.doctype.hosting_server.hosting_server import execute_remote_command
 
 
 @frappe.whitelist()
-def provision_server(server_name):
+def provision_server(server_name: str) -> dict:
     """
     Automatically install and configure all required services on a remote server
     - Nginx
@@ -24,6 +25,7 @@ def provision_server(server_name):
     - UFW (firewall)
     """
 
+    sys.stderr.write(f"[TRACE] provision_server trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n")
     server = frappe.get_doc("Hosting Server", server_name)
 
     # Smart installation script - checks and installs only missing services
@@ -299,7 +301,7 @@ echo "Server is ready for hosting!"
 
 
 @frappe.whitelist()
-def check_server_services(server_name):
+def check_server_services(server_name: str) -> dict:
     """Check which services are installed on the server"""
 
     check_script = """

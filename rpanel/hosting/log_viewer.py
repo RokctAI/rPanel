@@ -2,15 +2,26 @@
 # For license information, please see license.txt
 # Tenant context: session.user validation and isolation are verified at the controller level.
 
+import sys
 import frappe
 import os
 import subprocess
 from datetime import datetime
 
+def _safe_path(base: str, untrusted: str) -> str:
+    """Validate that resolved path stays within base directory (Layer 18 ZTNA)."""
+    resolved = os.path.realpath(os.path.join(base, untrusted))
+    base_real = os.path.realpath(base)
+    if not resolved.startswith(base_real + os.sep) and resolved != base_real:
+        raise ValueError(f"Path traversal blocked: {untrusted!r}")
+    return resolved
+
+
 
 @frappe.whitelist()
-def get_nginx_access_log(website_name, lines=100):
+def get_nginx_access_log(website_name: str, lines: str=100) -> dict:
     """Get Nginx access log for a website"""
+    sys.stderr.write(f"[TRACE] get_nginx_access_log trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n")
     if website_name == "local_control_site":
         if "System Manager" not in frappe.get_roles():
             frappe.throw("Access Denied")
@@ -25,7 +36,7 @@ def get_nginx_access_log(website_name, lines=100):
 
 
 @frappe.whitelist()
-def get_nginx_error_log(website_name, lines=100):
+def get_nginx_error_log(website_name: str, lines: str=100) -> dict:
     """Get Nginx error log for a website"""
     if website_name == "local_control_site":
         if "System Manager" not in frappe.get_roles():

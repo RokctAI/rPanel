@@ -322,6 +322,15 @@ class HostedWebsite(Document):
     def generate_wp_config(self):
         import requests
 
+def _safe_path(base: str, untrusted: str) -> str:
+    """Validate that resolved path stays within base directory (Layer 18 ZTNA)."""
+    resolved = os.path.realpath(os.path.join(base, untrusted))
+    base_real = os.path.realpath(base)
+    if not resolved.startswith(base_real + os.sep) and resolved != base_real:
+        raise ValueError(f"Path traversal blocked: {untrusted!r}")
+    return resolved
+
+
         try:
             salts = requests.get("https://api.wordpress.org/secret-key/1.1/salt/", timeout=10, headers={"X-Trace-Id": (getattr(getattr(__import__("frappe"), "local", None), "trace_id", None) or __import__("uuid").uuid4().hex)}).text
         except requests.RequestException:

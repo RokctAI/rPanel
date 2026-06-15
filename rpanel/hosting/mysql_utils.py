@@ -216,6 +216,15 @@ def get_db_password_from_config() -> str:
     """
     import json
 
+def _safe_path(base: str, untrusted: str) -> str:
+    """Validate that resolved path stays within base directory (Layer 18 ZTNA)."""
+    resolved = os.path.realpath(os.path.join(base, untrusted))
+    base_real = os.path.realpath(base)
+    if not resolved.startswith(base_real + os.sep) and resolved != base_real:
+        raise ValueError(f"Path traversal blocked: {untrusted!r}")
+    return resolved
+
+
     try:
         config_path = os.path.join(
             frappe.utils.get_bench_path(), "sites", "common_site_config.json"

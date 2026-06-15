@@ -314,6 +314,15 @@ def secure_website_permissions(site_path, owner="www-data"):
     """
     import subprocess
 
+def _safe_path(base: str, untrusted: str) -> str:
+    """Validate that resolved path stays within base directory (Layer 18 ZTNA)."""
+    resolved = os.path.realpath(os.path.join(base, untrusted))
+    base_real = os.path.realpath(base)
+    if not resolved.startswith(base_real + os.sep) and resolved != base_real:
+        raise ValueError(f"Path traversal blocked: {untrusted!r}")
+    return resolved
+
+
     try:
         # Set directory permissions: 755 (rwxr-xr-x)
         subprocess.run(

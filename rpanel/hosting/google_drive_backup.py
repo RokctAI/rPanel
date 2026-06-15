@@ -2,6 +2,7 @@
 # For license information, please see license.txt
 # Tenant context: session.user validation and isolation are verified at the controller level.
 
+import sys
 import frappe
 import os
 from google.oauth2 import service_account
@@ -10,8 +11,9 @@ from googleapiclient.http import MediaFileUpload, MediaIoBaseDownload
 
 
 @frappe.whitelist()
-def upload_to_google_drive(backup_name):
+def upload_to_google_drive(backup_name: str) -> dict:
     """Upload backup file to Google Drive"""
+    sys.stderr.write(f"[TRACE] upload_to_google_drive trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n")
     backup = frappe.get_doc("Site Backup", backup_name)
     settings = frappe.get_single("Hosting Settings")
 
@@ -62,7 +64,7 @@ def upload_to_google_drive(backup_name):
 
 
 @frappe.whitelist()
-def list_google_drive_backups():
+def list_google_drive_backups() -> dict:
     """List all backups in Google Drive"""
     settings = frappe.get_single("Hosting Settings")
     credentials_file = settings.get("google_drive_credentials_file")

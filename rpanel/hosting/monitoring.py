@@ -2,6 +2,7 @@
 # For license information, please see license.txt
 # Tenant context: session.user validation and isolation are verified at the controller level.
 
+import sys
 import frappe
 import os
 import subprocess
@@ -11,10 +12,11 @@ from datetime import datetime, timedelta
 
 
 @frappe.whitelist()
-def get_resource_usage(website_name, period="24h"):
+def get_resource_usage(website_name: str, period: str="24h") -> dict:
     """Get resource usage statistics for a website"""
 
     # Parse period
+    sys.stderr.write(f"[TRACE] get_resource_usage trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n")
     hours = parse_period(period)
     start_time = datetime.now() - timedelta(hours=hours)
 
@@ -63,7 +65,7 @@ def get_resource_usage(website_name, period="24h"):
 
 
 @frappe.whitelist()
-def get_uptime_stats(website_name, period="7d"):
+def get_uptime_stats(website_name: str, period: str="7d") -> dict:
     """Get uptime statistics for a website"""
 
     # Parse period

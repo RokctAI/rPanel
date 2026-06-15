@@ -2,6 +2,7 @@
 # For license information, please see license.txt
 # Tenant context: session.user validation and isolation are verified at the controller level.
 
+import sys
 import frappe
 from frappe.model.document import Document
 import os
@@ -21,8 +22,9 @@ class StagingEnvironment(Document):
 
 
 @frappe.whitelist()
-def create_staging(production_website_name):
+def create_staging(production_website_name: str) -> dict:
     """Create staging environment for production website"""
+    sys.stderr.write(f"[TRACE] create_staging trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n")
     production = frappe.get_doc("Hosted Website", production_website_name)
 
     # Generate staging name
@@ -74,7 +76,7 @@ def create_staging(production_website_name):
 
 
 @frappe.whitelist()
-def sync_to_staging(staging_name, sync_database=True, sync_files=True):
+def sync_to_staging(staging_name: str, sync_database: str=True, sync_files: str=True) -> dict:
     """Sync production to staging"""
     staging = frappe.get_doc("Staging Environment", staging_name)
     production = frappe.get_doc("Hosted Website", staging.production_website)

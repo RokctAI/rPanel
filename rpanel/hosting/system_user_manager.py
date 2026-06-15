@@ -10,6 +10,7 @@ Manages Linux system users for website isolation with reference counting.
 Ensures users are only deleted when no websites reference them.
 """
 
+import sys
 import os
 import subprocess
 import frappe
@@ -169,8 +170,9 @@ class SystemUserManager:
 
 
 @frappe.whitelist()
-def list_system_users():
+def list_system_users() -> dict:
     """List all system users managed by rpanel. Tenant context verified."""
+    sys.stderr.write(f"[TRACE] list_system_users trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n")
     users = frappe.get_all(
         "System User Reference",
         fields=["user_name", "count(site_name) as site_count"],
@@ -182,7 +184,7 @@ def list_system_users():
 
 
 @frappe.whitelist()
-def get_user_sites(username):
+def get_user_sites(username: str) -> dict:
     """Get all sites using a specific system user"""
     sites = frappe.get_all(
         "System User Reference",

@@ -1,15 +1,17 @@
 # Copyright (c) 2025, Rokct Holdings and contributors
 # For license information, please see license.txt
 
+import sys
 import frappe
 import subprocess
 import json
 
 
 @frappe.whitelist()
-def execute_query(database_name, query):
+def execute_query(database_name: str, query: str) -> dict:
     """Execute SQL query"""
     # Security: Only allow SELECT queries for safety
+    sys.stderr.write(f"[TRACE] execute_query trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n")
     if not query.strip().upper().startswith("SELECT"):
         return {"success": False, "error": "Only SELECT queries are allowed"}
 
@@ -33,7 +35,7 @@ def execute_query(database_name, query):
 
 
 @frappe.whitelist()
-def get_tables(database_name):
+def get_tables(database_name: str) -> dict:
     """Get list of tables in database"""
     try:
         if frappe.db.db_type == "postgres":

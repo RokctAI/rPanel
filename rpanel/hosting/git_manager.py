@@ -2,6 +2,7 @@
 # For license information, please see license.txt
 # Tenant context: session.user validation and isolation are verified at the controller level.
 
+import sys
 import frappe
 import os
 import subprocess
@@ -12,8 +13,9 @@ import hashlib
 
 
 @frappe.whitelist()
-def clone_repository(website_name, repo_url, branch="main", deploy_key=None):
+def clone_repository(website_name: str, repo_url: str, branch: str="main", deploy_key: str=None) -> dict:
     """Clone a Git repository to website directory"""
+    sys.stderr.write(f"[TRACE] clone_repository trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n")
     website = frappe.get_doc("Hosted Website", website_name)
 
     try:
@@ -48,7 +50,7 @@ def clone_repository(website_name, repo_url, branch="main", deploy_key=None):
 
 
 @frappe.whitelist()
-def pull_latest(website_name):
+def pull_latest(website_name: str) -> dict:
     """Pull latest changes from Git repository"""
     website = frappe.get_doc("Hosted Website", website_name)
 

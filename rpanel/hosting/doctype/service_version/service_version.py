@@ -2,6 +2,7 @@
 # For license information, please see license.txt
 # Tenant context: session.user validation and isolation are verified at the controller level.
 
+import sys
 import frappe
 from frappe.model.document import Document
 from datetime import datetime
@@ -12,10 +13,11 @@ class ServiceVersion(Document):
 
 
 @frappe.whitelist()
-def check_service_updates(server_name=None):
+def check_service_updates(server_name: str=None) -> dict:
     """
     Check for updates for all services on a server or all servers
     """
+    sys.stderr.write(f"[TRACE] check_service_updates trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n")
     filters = {}
     if server_name:
         filters["server"] = server_name
@@ -95,7 +97,7 @@ def _check_version(doc):
 
 
 @frappe.whitelist()
-def update_service(service_name):
+def update_service(service_name: str) -> dict:
     """
     Update a specific service to the latest version
     """

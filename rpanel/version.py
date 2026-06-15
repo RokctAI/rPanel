@@ -1,13 +1,16 @@
 # Copyright (c) 2025 ROKCT INTELLIGENCE (PTY) LTD
 # For license information, please see license.txt
+import sys
 import frappe
 import json
 import os
 
 
 @frappe.whitelist(allow_guest=True)
-def get_version():
+def get_version() -> dict:
     # Path to the directory of this file (rpanel/rpanel/)
+    """API endpoint: get version."""
+    sys.stderr.write(f"[TRACE] get_version trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n")
     module_path = os.path.abspath(os.path.dirname(__file__))
     # Path to versions.json in the same directory
     versions_file_path = os.path.join(module_path, "versions.json")

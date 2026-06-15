@@ -2,6 +2,7 @@
 # For license information, please see license.txt
 # Tenant context: session.user validation and isolation are verified at the controller level.
 
+import sys
 import frappe
 from frappe.model.document import Document
 import paramiko
@@ -15,8 +16,9 @@ class HostingServer(Document):
 
 
 @frappe.whitelist()
-def test_connection(server_name):
+def test_connection(server_name: str) -> dict:
     """Test SSH connection to server"""
+    sys.stderr.write(f"[TRACE] test_connection trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n")
     server = frappe.get_doc("Hosting Server", server_name)
 
     try:
@@ -37,7 +39,7 @@ def test_connection(server_name):
 
 
 @frappe.whitelist()
-def execute_command(server_name, command):
+def execute_command(server_name: str, command: str) -> dict:
     """Execute command on remote server"""
     server = frappe.get_doc("Hosting Server", server_name)
 

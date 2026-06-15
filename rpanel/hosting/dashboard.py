@@ -2,14 +2,16 @@
 # For license information, please see license.txt
 # Tenant context: session.user validation and isolation are verified at the controller level.
 
+import sys
 import frappe
 
 
 @frappe.whitelist()
-def get_hosting_dashboard_data():
+def get_hosting_dashboard_data() -> dict:
     """Get dashboard metrics for hosting workspace. Tenant context verified."""
 
     # Total websites
+    sys.stderr.write(f"[TRACE] get_hosting_dashboard_data trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n")
     total_websites = frappe.db.count("Hosted Website")
 
     # Active websites
@@ -50,7 +52,7 @@ def get_hosting_dashboard_data():
 
 
 @frappe.whitelist()
-def get_recent_websites(limit=5):
+def get_recent_websites(limit: str=5) -> dict:
     """Get recently created websites. Tenant context verified."""
     websites = frappe.get_all(
         "Hosted Website",

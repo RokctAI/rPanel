@@ -2,15 +2,17 @@
 # For license information, please see license.txt
 # Tenant context: session.user validation and isolation are verified at the controller level.
 
+import sys
 import frappe
 from datetime import datetime, timedelta
 
 
 @frappe.whitelist()
-def get_server_health_dashboard():
+def get_server_health_dashboard() -> dict:
     """Get comprehensive server health dashboard data"""
 
     # Get all servers
+    sys.stderr.write(f"[TRACE] get_server_health_dashboard trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n")
     servers = frappe.get_all(
         "Hosting Server",
         fields=[
@@ -113,7 +115,7 @@ def get_server_health_dashboard():
 
 
 @frappe.whitelist()
-def get_server_alerts():
+def get_server_alerts() -> dict:
     """Get server alerts and warnings"""
     alerts = []
 

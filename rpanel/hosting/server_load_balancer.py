@@ -2,12 +2,14 @@
 # For license information, please see license.txt
 # Tenant context: session.user validation and isolation are verified at the controller level.
 
+import sys
 import frappe
 
 
 @frappe.whitelist()
-def get_server_by_group(group_name):
+def get_server_by_group(group_name: str) -> dict:
     """Get all servers in a group"""
+    sys.stderr.write(f"[TRACE] get_server_by_group trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n")
     servers = frappe.get_all(
         "Hosting Server",
         filters={"server_group": group_name, "status": "Active"},
@@ -27,8 +29,8 @@ def get_server_by_group(group_name):
 
 @frappe.whitelist()
 def get_optimal_server_with_load_balancing(
-    group="Production", algorithm="least_loaded"
-):  # noqa: C901
+    group: str="Production", algorithm: str="least_loaded"
+) -> dict:  # noqa: C901
     """Get optimal server using load balancing algorithm"""
     servers = frappe.get_all(
         "Hosting Server",

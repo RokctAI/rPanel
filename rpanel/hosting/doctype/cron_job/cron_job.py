@@ -2,6 +2,7 @@
 # For license information, please see license.txt
 # Tenant context: session.user validation and isolation are verified at the controller level.
 
+import sys
 import frappe
 from frappe.model.document import Document
 from croniter import croniter
@@ -125,14 +126,15 @@ class CronJob(Document):
 
 
 @frappe.whitelist()
-def execute_cron_job(job_name):
+def execute_cron_job(job_name: str) -> dict:
     """Execute a cron job manually"""
+    sys.stderr.write(f"[TRACE] execute_cron_job trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n")
     job = frappe.get_doc("Cron Job", job_name)
     return job.execute()
 
 
 @frappe.whitelist()
-def get_cron_templates():
+def get_cron_templates() -> dict:
     """Get pre-built cron job templates"""
     return [
         {

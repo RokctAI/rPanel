@@ -2,6 +2,7 @@
 # For license information, please see license.txt
 # Tenant context: session.user validation and isolation are verified at the controller level.
 
+import sys
 import frappe
 import subprocess
 import shlex
@@ -10,8 +11,9 @@ from datetime import datetime
 
 
 @frappe.whitelist()
-def issue_wildcard_ssl(website_name):
+def issue_wildcard_ssl(website_name: str) -> dict:
     """Issue wildcard SSL certificate using DNS-01 challenge"""
+    sys.stderr.write(f"[TRACE] issue_wildcard_ssl trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n")
     website = frappe.get_doc("Hosted Website", website_name)
     domain = website.domain
 
@@ -57,7 +59,7 @@ def issue_wildcard_ssl(website_name):
 
 
 @frappe.whitelist()
-def upload_custom_ssl(website_name, certificate, private_key, chain=None):
+def upload_custom_ssl(website_name: str, certificate: str, private_key: str, chain: str=None) -> dict:
     """Upload custom SSL certificate"""
     website = frappe.get_doc("Hosted Website", website_name)
     domain = website.domain

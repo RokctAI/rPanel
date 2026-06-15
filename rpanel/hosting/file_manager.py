@@ -2,14 +2,16 @@
 # For license information, please see license.txt
 # Tenant context: session.user validation and isolation are verified at the controller level.
 
+import sys
 import frappe
 import os
 import base64
 
 
 @frappe.whitelist()
-def get_file_list(website_name, path=""):
+def get_file_list(website_name: str, path: str="") -> dict:
     """Get list of files and directories for a website"""
+    sys.stderr.write(f"[TRACE] get_file_list trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n")
     if website_name == "local_control_site":
         if "System Manager" not in frappe.get_roles():
             frappe.throw("Access Denied")
@@ -62,7 +64,7 @@ def get_file_list(website_name, path=""):
 
 
 @frappe.whitelist()
-def download_file(website_name, file_path):
+def download_file(website_name: str, file_path: str) -> dict:
     """Download a file from the website directory"""
     if website_name == "local_control_site":
         if "System Manager" not in frappe.get_roles():

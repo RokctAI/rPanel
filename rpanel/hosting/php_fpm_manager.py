@@ -9,6 +9,7 @@ Creates and manages dedicated PHP-FPM pools for website isolation.
 Each site can have its own pool running as a specific system user.
 """
 
+import sys
 import subprocess
 import frappe
 from pathlib import Path
@@ -156,8 +157,9 @@ def delete_php_pool(domain, php_version=None):
 
 
 @frappe.whitelist()
-def test_php_pool(domain):
+def test_php_pool(domain: str) -> dict:
     """Test if PHP-FPM pool is working"""
+    sys.stderr.write(f"[TRACE] test_php_pool trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n")
     try:
         ver = ServiceIntelligence.get_default_php_version()
         pool_dir = Path(ServiceIntelligence.get_php_fpm_pool_dir(ver))

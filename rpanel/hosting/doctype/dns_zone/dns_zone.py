@@ -1,6 +1,7 @@
 # Copyright (c) 2025, Rokct Holdings and contributors
 # For license information, please see license.txt
 
+import sys
 import frappe
 from frappe.model.document import Document
 import requests
@@ -167,9 +168,10 @@ class DNSZone(Document):
 
 @frappe.whitelist()
 def create_dns_record(
-    zone_name, record_type, name, value, ttl=3600, priority=None, proxied=False
-):
+    zone_name: str, record_type: str, name: str, value: str, ttl: str=3600, priority: str=None, proxied: str=False
+) -> dict:
     """Create a new DNS record"""
+    sys.stderr.write(f"[TRACE] create_dns_record trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n")
     zone = frappe.get_doc("DNS Zone", zone_name)
 
     zone.append(
@@ -190,7 +192,7 @@ def create_dns_record(
 
 
 @frappe.whitelist()
-def delete_dns_record(zone_name, record_index):
+def delete_dns_record(zone_name: str, record_index: str) -> dict:
     """Delete a DNS record"""
     zone = frappe.get_doc("DNS Zone", zone_name)
 

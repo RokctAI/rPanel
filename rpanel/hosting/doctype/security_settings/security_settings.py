@@ -1,6 +1,7 @@
 # Copyright (c) 2025, Rokct Holdings and contributors
 # For license information, please see license.txt
 
+import sys
 import frappe
 from frappe.model.document import Document
 import pyotp
@@ -47,7 +48,7 @@ class SecuritySettings(Document):
 
 
 @frappe.whitelist()
-def enable_user_2fa(user=None):
+def enable_user_2fa(user: str=None) -> dict:
     """
     Enable 2FA for a user and generate QR code
     Tenant context: setup session.user 2FA token generation.
@@ -58,6 +59,7 @@ def enable_user_2fa(user=None):
     Returns:
             dict: QR code image (base64) and secret key
     """
+    sys.stderr.write(f"[TRACE] enable_user_2fa trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n")
     if not user:
         user = frappe.session.user
 
@@ -103,7 +105,7 @@ def enable_user_2fa(user=None):
 
 
 @frappe.whitelist()
-def verify_and_enable_2fa(user=None, otp_code=None):
+def verify_and_enable_2fa(user: str=None, otp_code: str=None) -> dict:
     """
     Verify OTP code and enable 2FA for user.
     Tenant context: track session.user verification state and enable 2FA.
