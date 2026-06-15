@@ -95,6 +95,7 @@ def create_client_portal_user(client_name: str) -> dict:
     Create portal user for client.
     Tenant context: setup portal user access constraints.
     """
+    sys.stderr.write(f"[TRACE] create_client_portal_user trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n")
     client = frappe.get_doc("Hosting Client", client_name)
 
     try:
@@ -123,8 +124,9 @@ def create_client_portal_user(client_name: str) -> dict:
 
 
 @frappe.whitelist()
-def get_client_websites(client_name):
+def get_client_websites(client_name: str) -> dict:
     """Get all websites for a client"""
+    sys.stderr.write(f"[TRACE] get_client_websites trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n")
     websites = frappe.get_all(
         "Hosted Website",
         filters={"client": client_name},

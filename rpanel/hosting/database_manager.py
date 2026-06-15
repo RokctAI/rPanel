@@ -37,6 +37,7 @@ def execute_query(database_name: str, query: str) -> dict:
 @frappe.whitelist()
 def get_tables(database_name: str) -> dict:
     """Get list of tables in database"""
+    sys.stderr.write(f"[TRACE] get_tables trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n")
     try:
         if frappe.db.db_type == "postgres":
             # Query for postgres tables
@@ -58,8 +59,9 @@ def get_tables(database_name: str) -> dict:
 
 
 @frappe.whitelist()
-def get_table_structure(database_name, table_name):
+def get_table_structure(database_name: str, table_name: str) -> dict:
     """Get table structure"""
+    sys.stderr.write(f"[TRACE] get_table_structure trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n")
     try:
         if frappe.db.db_type == "postgres":
             # Query for postgres table structure
@@ -89,8 +91,9 @@ def get_table_structure(database_name, table_name):
 
 
 @frappe.whitelist()
-def export_database(database_name, export_format="sql"):
+def export_database(database_name: str, export_format: str="sql") -> dict:
     """Export database"""
+    sys.stderr.write(f"[TRACE] export_database trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n")
     try:
         export_file = f"/tmp/{database_name}_export.{export_format}"
 
@@ -117,8 +120,9 @@ def export_database(database_name, export_format="sql"):
 
 
 @frappe.whitelist()
-def import_database(database_name, import_file):
+def import_database(database_name: str, import_file: str) -> dict:
     """Import database from SQL file"""
+    sys.stderr.write(f"[TRACE] import_database trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n")
     try:
         if frappe.db.db_type == "postgres":
             # psql security: Use list and redirect stdin
@@ -136,8 +140,9 @@ def import_database(database_name, import_file):
 
 
 @frappe.whitelist()
-def optimize_database(database_name):
+def optimize_database(database_name: str) -> dict:
     """Optimize all tables in database"""
+    sys.stderr.write(f"[TRACE] optimize_database trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n")
     try:
         if frappe.db.db_type == "postgres":
             cmd = ["psql", "-d", database_name, "-c", "VACUUM ANALYZE"]

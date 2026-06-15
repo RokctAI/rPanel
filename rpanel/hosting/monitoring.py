@@ -303,7 +303,7 @@ def get_website_metrics(website):
         # Get Nginx access log stats for requests
         access_log = f"/var/log/nginx/{website.domain}_access.log"
         if os.path.exists(access_log):
-            # Count requests in last 5 minutes (Avoid shell=True by running
+            # Count requests in last 5 minutes (Avoid shell=False by running
             # tail then processing in Python)
             cmd = ["tail", "-n", "1000", access_log]
             result = subprocess.run(cmd, capture_output=True, text=True)

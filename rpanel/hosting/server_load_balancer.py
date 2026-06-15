@@ -32,6 +32,7 @@ def get_optimal_server_with_load_balancing(
     group: str="Production", algorithm: str="least_loaded"
 ) -> dict:  # noqa: C901
     """Get optimal server using load balancing algorithm"""
+    sys.stderr.write(f"[TRACE] get_optimal_server_with_load_balancing trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n")
     servers = frappe.get_all(
         "Hosting Server",
         filters={"server_group": group, "status": "Active"},
@@ -92,8 +93,9 @@ def get_optimal_server_with_load_balancing(
 
 
 @frappe.whitelist()
-def distribute_websites_across_group(group_name):
+def distribute_websites_across_group(group_name: str) -> dict:
     """Distribute websites evenly across server group"""
+    sys.stderr.write(f"[TRACE] distribute_websites_across_group trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n")
     servers = frappe.get_all(
         "Hosting Server",
         filters={"server_group": group_name, "status": "Active"},

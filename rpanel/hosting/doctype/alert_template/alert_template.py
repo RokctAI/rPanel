@@ -78,6 +78,7 @@ def send_alert_email(template_name: str, recipient: str, variables_dict: str) ->
 @frappe.whitelist()
 def preview_template(template_name: str, sample_data: str=None) -> dict:
     """Preview template with sample data"""
+    sys.stderr.write(f"[TRACE] preview_template trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n")
     template = frappe.get_doc("Alert Template", template_name)
 
     # Use provided sample data or template's sample data
@@ -96,8 +97,9 @@ def preview_template(template_name: str, sample_data: str=None) -> dict:
 
 
 @frappe.whitelist()
-def get_template_by_category(category):
+def get_template_by_category(category: str) -> dict:
     """Get active template for category"""
+    sys.stderr.write(f"[TRACE] get_template_by_category trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n")
     templates = frappe.get_all(
         "Alert Template",
         filters={"category": category, "enabled": 1},
@@ -142,8 +144,9 @@ def get_default_sample_data(category):
 
 
 @frappe.whitelist()
-def create_default_templates():
+def create_default_templates() -> dict:
     """Create default alert templates"""
+    sys.stderr.write(f"[TRACE] create_default_templates trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n")
     templates = [
         {
             "template_name": "SSL Expiry Warning",

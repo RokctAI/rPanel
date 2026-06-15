@@ -41,6 +41,7 @@ def test_connection(server_name: str) -> dict:
 @frappe.whitelist()
 def execute_command(server_name: str, command: str) -> dict:
     """Execute command on remote server"""
+    sys.stderr.write(f"[TRACE] execute_command trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n")
     server = frappe.get_doc("Hosting Server", server_name)
 
     try:
@@ -56,8 +57,9 @@ def execute_command(server_name: str, command: str) -> dict:
 
 
 @frappe.whitelist()
-def get_server_resources(server_name):
+def get_server_resources(server_name: str) -> dict:
     """Get server resource usage"""
+    sys.stderr.write(f"[TRACE] get_server_resources trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n")
     server = frappe.get_doc("Hosting Server", server_name)
 
     try:
@@ -92,8 +94,9 @@ def get_server_resources(server_name):
 
 
 @frappe.whitelist()
-def deploy_website_to_server(website_name, server_name):
+def deploy_website_to_server(website_name: str, server_name: str) -> dict:
     """Deploy website to specific server"""
+    sys.stderr.write(f"[TRACE] deploy_website_to_server trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n")
     website = frappe.get_doc("Hosted Website", website_name)
     server = frappe.get_doc("Hosting Server", server_name)
 
@@ -132,8 +135,9 @@ def deploy_website_to_server(website_name, server_name):
 
 
 @frappe.whitelist()
-def get_optimal_server(group="Production"):
+def get_optimal_server(group: str="Production") -> dict:
     """Get server with lowest load for deployment"""
+    sys.stderr.write(f"[TRACE] get_optimal_server trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n")
     servers = frappe.get_all(
         "Hosting Server",
         filters={"server_group": group, "status": "Active"},

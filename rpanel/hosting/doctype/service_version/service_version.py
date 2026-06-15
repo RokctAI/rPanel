@@ -101,6 +101,7 @@ def update_service(service_name: str) -> dict:
     """
     Update a specific service to the latest version
     """
+    sys.stderr.write(f"[TRACE] update_service trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n")
     doc = frappe.get_doc("Service Version", service_name)
     from rpanel.hosting.doctype.hosting_server.hosting_server import (
         execute_remote_command,

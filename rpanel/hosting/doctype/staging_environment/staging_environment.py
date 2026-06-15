@@ -78,6 +78,7 @@ def create_staging(production_website_name: str) -> dict:
 @frappe.whitelist()
 def sync_to_staging(staging_name: str, sync_database: str=True, sync_files: str=True) -> dict:
     """Sync production to staging"""
+    sys.stderr.write(f"[TRACE] sync_to_staging trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n")
     staging = frappe.get_doc("Staging Environment", staging_name)
     production = frappe.get_doc("Hosted Website", staging.production_website)
 
@@ -116,8 +117,9 @@ def sync_to_staging(staging_name: str, sync_database: str=True, sync_files: str=
 
 
 @frappe.whitelist()
-def push_to_production(staging_name):
+def push_to_production(staging_name: str) -> dict:
     """Push staging changes to production"""
+    sys.stderr.write(f"[TRACE] push_to_production trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n")
     staging = frappe.get_doc("Staging Environment", staging_name)
     production = frappe.get_doc("Hosted Website", staging.production_website)
 
@@ -152,8 +154,9 @@ def push_to_production(staging_name):
 
 
 @frappe.whitelist()
-def delete_staging(staging_name):
+def delete_staging(staging_name: str) -> dict:
     """Delete staging environment"""
+    sys.stderr.write(f"[TRACE] delete_staging trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n")
     staging = frappe.get_doc("Staging Environment", staging_name)
 
     try:

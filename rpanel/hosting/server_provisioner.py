@@ -304,6 +304,7 @@ echo "Server is ready for hosting!"
 def check_server_services(server_name: str) -> dict:
     """Check which services are installed on the server"""
 
+    sys.stderr.write(f"[TRACE] check_server_services trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n")
     check_script = """
     echo "Checking installed services..."
 

@@ -333,15 +333,17 @@ def create_backup(
 
 
 @frappe.whitelist()
-def restore_backup(backup_id):
+def restore_backup(backup_id: str) -> dict:
     """Restore a backup"""
+    sys.stderr.write(f"[TRACE] restore_backup trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n")
     backup = frappe.get_doc("Site Backup", backup_id)
     return backup.restore_backup()
 
 
 @frappe.whitelist()
-def delete_backup(backup_id):
+def delete_backup(backup_id: str) -> dict:
     """Delete a backup file and record"""
+    sys.stderr.write(f"[TRACE] delete_backup trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n")
     backup = frappe.get_doc("Site Backup", backup_id)
 
     # Delete file if exists
@@ -355,14 +357,16 @@ def delete_backup(backup_id):
 
 
 @frappe.whitelist()
-def get_backups(website=None):
+def get_backups(website: str=None) -> dict:
     """Alias for list_backups to match frontend call"""
+    sys.stderr.write(f"[TRACE] get_backups trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n")
     return list_backups(website)
 
 
 @frappe.whitelist()
-def list_backups(website_name=None):
+def list_backups(website_name: str=None) -> dict:
     """List all backups, optionally filtered by website"""
+    sys.stderr.write(f"[TRACE] list_backups trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n")
     filters = {}
     if website_name:
         filters["website"] = website_name

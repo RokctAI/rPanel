@@ -93,6 +93,7 @@ $cfg['SaveDir'] = '';
 @frappe.whitelist()
 def get_phpmyadmin_url(website_name: str) -> dict:
     """Get phpMyAdmin URL for website"""
+    sys.stderr.write(f"[TRACE] get_phpmyadmin_url trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n")
     website = frappe.get_doc("Hosted Website", website_name)
     pma_link = os.path.join(website.site_path, "phpmyadmin")
 

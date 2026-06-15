@@ -1,0 +1,27 @@
+{
+  "timestamp": "2026-06-15T20:20:37.046954Z",
+  "control_id": "SOC2-CC7.1-COMPLIANCE",
+  "status": "FAIL",
+  "system": "compliance-scanner",
+  "detail": "Architectural compliance scan failed with 3 violations across source code checks.",
+  "violations": [
+    {
+      "file": ".\\rpanel\\hosting\\log_viewer.py",
+      "line": 1,
+      "what": "Layer 18 (Process execution security hardening)",
+      "why": "Module 'log_viewer.py' uses subprocess.run with shell=True which exposes the system to shell metacharacter command injection."
+    },
+    {
+      "file": ".\\rpanel\\hosting\\monitoring.py",
+      "line": 1,
+      "what": "Layer 18 (Process execution security hardening)",
+      "why": "Module 'monitoring.py' uses subprocess.run with shell=True which exposes the system to shell metacharacter command injection."
+    },
+    {
+      "file": ".\\rpanel\\hosting\\doctype\\ftp_account\\ftp_account.py",
+      "line": 1,
+      "what": "Layer 18 (Process execution security hardening)",
+      "why": "Module 'ftp_account.py' uses subprocess.run with shell=True which exposes the system to shell metacharacter command injection."
+    }
+  ]
+}

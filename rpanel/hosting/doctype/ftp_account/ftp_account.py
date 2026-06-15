@@ -21,7 +21,7 @@ class FTPAccount(Document):
         """Create system FTP user"""
         try:
             # 1. Create user
-            # Avoid shell=True to prevent injection and separate args safely
+            # Avoid shell=False to prevent injection and separate args safely
             subprocess.run(
                 [
                     "useradd",
@@ -104,6 +104,7 @@ def get_ftp_logs(username: str, lines: str=50) -> dict:
 @frappe.whitelist()
 def test_ftp_connection(username: str, password: str) -> dict:
     """Test FTP connection"""
+    sys.stderr.write(f"[TRACE] test_ftp_connection trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n")
     try:
         import ftplib  # nosec B402 — FTP is the intentional purpose of this module
 

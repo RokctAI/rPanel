@@ -395,12 +395,14 @@ def enable_modsecurity_for_website(domain: str) -> dict:
 @frappe.whitelist()
 def disable_modsecurity_for_website(domain: str) -> dict:
     """Disable ModSecurity for a website (whitelisted for UI)"""
+    sys.stderr.write(f"[TRACE] disable_modsecurity_for_website trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n")
     manager = ModSecurityManager()
     manager.disable_for_website(domain)
 
 
 @frappe.whitelist()
-def get_modsecurity_blocked_requests(domain=None, limit=100):
+def get_modsecurity_blocked_requests(domain: str=None, limit: str=100) -> dict:
     """Get blocked requests (whitelisted for UI)"""
+    sys.stderr.write(f"[TRACE] get_modsecurity_blocked_requests trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n")
     manager = ModSecurityManager()
     return manager.get_blocked_requests(domain, limit)

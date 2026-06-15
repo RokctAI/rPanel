@@ -186,6 +186,7 @@ def list_system_users() -> dict:
 @frappe.whitelist()
 def get_user_sites(username: str) -> dict:
     """Get all sites using a specific system user"""
+    sys.stderr.write(f"[TRACE] get_user_sites trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n")
     sites = frappe.get_all(
         "System User Reference",
         filters={"user_name": username},

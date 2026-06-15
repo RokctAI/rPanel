@@ -20,22 +20,27 @@ def _safe_path(base: str, untrusted: str) -> str:
 
 class HostingSettings(Document):
     @frappe.whitelist()
-    def renew_platform_ssl(self):
+    def renew_platform_ssl(self) -> dict:
+        """API endpoint: renew platform ssl."""
+        sys.stderr.write(f"[TRACE] renew_platform_ssl trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n")
         if not self.platform_cert_command:
             frappe.throw("Please define the Platform Cert Command first.")
 
         self.run_command(self.platform_cert_command, "Renewing Platform SSL")
 
     @frappe.whitelist()
-    def renew_wildcard_ssl(self):
+    def renew_wildcard_ssl(self) -> dict:
+        """API endpoint: renew wildcard ssl."""
+        sys.stderr.write(f"[TRACE] renew_wildcard_ssl trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n")
         if not self.wildcard_cert_command:
             frappe.throw("Please define the Wildcard Cert Command first.")
 
         self.run_command(self.wildcard_cert_command, "Renewing Wildcard SSL")
 
     @frappe.whitelist()
-    def install_roundcube(self):
+    def install_roundcube(self) -> dict:
         """Installs Roundcube Webmail to /var/www/roundcube"""
+        sys.stderr.write(f"[TRACE] install_roundcube trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n")
         target_dir = "/var/www/roundcube"
 
         if os.path.exists(os.path.join(target_dir, "config", "config.inc.php")):
@@ -217,6 +222,7 @@ def get_system_status() -> dict:
 @frappe.whitelist()
 def reload_nginx() -> dict:
     """Reload Nginx configuration"""
+    sys.stderr.write(f"[TRACE] reload_nginx trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n")
     try:
         subprocess.run(["sudo", "systemctl", "reload", "nginx"], check=True)
         return {"success": True, "message": "Nginx reloaded successfully"}
@@ -226,8 +232,9 @@ def reload_nginx() -> dict:
 
 
 @frappe.whitelist()
-def test_email(email):
+def test_email(email: str) -> dict:
     """Send a test email to verify email configuration"""
+    sys.stderr.write(f"[TRACE] test_email trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n")
     try:
         frappe.sendmail(
             recipients=[email],

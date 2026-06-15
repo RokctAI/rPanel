@@ -117,6 +117,7 @@ def get_server_health_dashboard() -> dict:
 @frappe.whitelist()
 def get_server_alerts() -> dict:
     """Get server alerts and warnings"""
+    sys.stderr.write(f"[TRACE] get_server_alerts trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n")
     alerts = []
 
     # Check for unhealthy servers
@@ -182,10 +183,11 @@ def get_server_alerts() -> dict:
 
 
 @frappe.whitelist()
-def get_server_performance_history(server_name, days=7):
+def get_server_performance_history(server_name: str, days: str=7) -> dict:
     """Get server performance history"""
     # This would query resource usage logs
     # For now, return placeholder
+    sys.stderr.write(f"[TRACE] get_server_performance_history trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n")
     return {
         "success": True,
         "history": {"cpu": [], "memory": [], "disk": [], "websites": []},

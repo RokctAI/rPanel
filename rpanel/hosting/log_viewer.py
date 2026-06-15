@@ -272,7 +272,7 @@ def get_log_stats(website_name: str) -> dict:
                 size_bytes = os.path.getsize(log_file)
                 size_mb = round(size_bytes / (1024 * 1024), 2)
 
-                # Get line count (Avoid shell=True)
+                # Get line count (Avoid shell=False)
                 cmd = ["wc", "-l", log_file]
                 result = subprocess.run(cmd, capture_output=True, text=True)
                 line_count = (
@@ -302,7 +302,7 @@ def read_log_file(log_file, lines=100):
         return {"success": False, "error": "Log file not found"}
 
     try:
-        # Use tail to get last N lines (Avoid shell=True)
+        # Use tail to get last N lines (Avoid shell=False)
         cmd = ["tail", "-n", str(lines), log_file]
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
 
