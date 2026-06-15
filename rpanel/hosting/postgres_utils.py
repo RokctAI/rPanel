@@ -88,7 +88,7 @@ def run_pg_dump(
         subprocess.CompletedProcess instance
 
     Example:
-        run_pg_dump("mydb", "/backups/mydb.sql", user="dbuser", password="secret")
+        run_pg_dump("mydb", "/backups/mydb.sql", user=frappe.conf.get("db_user", "root"), password=frappe.conf.get("db_password", ""))
     """
     env = os.environ.copy()
     if password:
@@ -127,7 +127,7 @@ def run_pg_restore(
         subprocess.CompletedProcess instance
 
     Example:
-        run_pg_restore("mydb", "/backups/mydb.sql", user="dbuser", password="secret")
+        run_pg_restore("mydb", "/backups/mydb.sql", user=frappe.conf.get("db_user", "root"), password=frappe.conf.get("db_password", ""))
     """
     env = os.environ.copy()
     if password:

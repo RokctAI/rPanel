@@ -38,7 +38,7 @@ def run_mysql_command(
         subprocess.CompletedProcess instance
 
     Example:
-        run_mysql_command("CREATE DATABASE mydb", user="admin", password="secret")
+        run_mysql_command("CREATE DATABASE mydb", user=frappe.conf.get("db_user", "root"), password=frappe.conf.get("db_password", ""))
     """
     config_file = None
     try:
@@ -91,7 +91,7 @@ def run_mysqldump(
         subprocess.CompletedProcess instance
 
     Example:
-        run_mysqldump("mydb", "/backups/mydb.sql", user="dbuser", password="secret")
+        run_mysqldump("mydb", "/backups/mydb.sql", user=frappe.conf.get("db_user", "root"), password=frappe.conf.get("db_password", ""))
     """
     config_file = None
     try:
@@ -140,7 +140,7 @@ def run_mysql_restore(
         subprocess.CompletedProcess instance
 
     Example:
-        run_mysql_restore("mydb", "/backups/mydb.sql", user="dbuser", password="secret")
+        run_mysql_restore("mydb", "/backups/mydb.sql", user=frappe.conf.get("db_user", "root"), password=frappe.conf.get("db_password", ""))
     """
     config_file = None
     try:
