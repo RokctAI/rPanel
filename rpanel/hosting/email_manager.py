@@ -141,11 +141,7 @@ def clear_email_queue():
         cutoff_date = datetime.now() - timedelta(days=30)
 
         frappe.db.delete(
-            "Email Queue",
-            filters={
-                "status": "Sent",
-                "creation": ["<", cutoff_date]
-            }
+            "Email Queue", filters={"status": "Sent", "creation": ["<", cutoff_date]}
         )
 
         frappe.db.commit()
