@@ -25,7 +25,7 @@ Returns:
     subprocess.CompletedProcess instance
 
 Example:
-    run_pg_dump("mydb", "/backups/mydb.sql", user="dbuser", password="secret")
+    run_pg_dump("mydb", "/backups/mydb.sql", user=frappe.conf.get("db_user", "root"), password=frappe.conf.get("db_password", ""))
 
 ### `def run_pg_restore(database, input_file, user='postgres', password=None, host='localhost', as_sudo=False)`
 Restore a PostgreSQL database from SQL file securely.
@@ -42,4 +42,4 @@ Returns:
     subprocess.CompletedProcess instance
 
 Example:
-    run_pg_restore("mydb", "/backups/mydb.sql", user="dbuser", password="secret")
+    run_pg_restore("mydb", "/backups/mydb.sql", user=frappe.conf.get("db_user", "root"), password=frappe.conf.get("db_password", ""))

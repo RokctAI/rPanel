@@ -24,7 +24,7 @@ Returns:
     subprocess.CompletedProcess instance
 
 Example:
-    run_mysql_command("CREATE DATABASE mydb", user="admin", password="secret")
+    run_mysql_command("CREATE DATABASE mydb", user=frappe.conf.get("db_user", "root"), password=frappe.conf.get("db_password", ""))
 
 ### `def run_mysqldump(database, output_file, user='root', password=None, host='localhost', tables=None, as_sudo=False)`
 Execute mysqldump securely without exposing passwords.
@@ -42,7 +42,7 @@ Returns:
     subprocess.CompletedProcess instance
 
 Example:
-    run_mysqldump("mydb", "/backups/mydb.sql", user="dbuser", password="secret")
+    run_mysqldump("mydb", "/backups/mydb.sql", user=frappe.conf.get("db_user", "root"), password=frappe.conf.get("db_password", ""))
 
 ### `def run_mysql_restore(database, input_file, user='root', password=None, host='localhost', as_sudo=False)`
 Restore a MySQL database from SQL file securely.
@@ -59,7 +59,7 @@ Returns:
     subprocess.CompletedProcess instance
 
 Example:
-    run_mysql_restore("mydb", "/backups/mydb.sql", user="dbuser", password="secret")
+    run_mysql_restore("mydb", "/backups/mydb.sql", user=frappe.conf.get("db_user", "root"), password=frappe.conf.get("db_password", ""))
 
 ### `def _safe_path(base, untrusted)`
 Validate that resolved path stays within base directory (Layer 18 ZTNA).
