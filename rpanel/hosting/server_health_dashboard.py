@@ -141,8 +141,7 @@ def get_server_alerts():
         fields=["server_name", "current_websites", "max_websites"],
     )
     near_capacity = [
-        s for s in active_servers
-        if s.current_websites >= s.max_websites * 0.9
+        s for s in active_servers if s.current_websites >= s.max_websites * 0.9
     ]
 
     for server in near_capacity:
