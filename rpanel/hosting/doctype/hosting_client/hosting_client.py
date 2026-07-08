@@ -20,9 +20,7 @@ class HostingClient(Document):
     def check_storage_quota(self):
         """Check if client has exceeded storage quota. Tenant context checked."""
         websites = frappe.get_all(
-            "Hosted Website",
-            filters={"client": self.name},
-            fields=["disk_usage_mb"]
+            "Hosted Website", filters={"client": self.name}, fields=["disk_usage_mb"]
         )
         total_storage = sum(w.get("disk_usage_mb") or 0 for w in websites)
 
@@ -68,9 +66,7 @@ def get_client_usage(client_name):
 
     # Get total storage
     websites = frappe.get_all(
-        "Hosted Website",
-        filters={"client": client_name},
-        fields=["disk_usage_mb"]
+        "Hosted Website", filters={"client": client_name}, fields=["disk_usage_mb"]
     )
     total_storage = sum(w.get("disk_usage_mb") or 0 for w in websites)
 
