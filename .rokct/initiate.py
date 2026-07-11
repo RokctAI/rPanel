@@ -11,22 +11,39 @@ import io
 import zipfile
 
 GITHUB_RAW_BASE = "https://raw.githubusercontent.com/RokctAI/The-Rokct-Protocol/main"
-GITHUB_ZIP_BASE = "https://github.com/RokctAI/The-Rokct-Protocol/archive/refs/heads/main.zip"
-PROTOCOL_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))) if "profiles" in os.path.abspath(__file__) else os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+GITHUB_ZIP_BASE = (
+    "https://github.com/RokctAI/The-Rokct-Protocol/archive/refs/heads/main.zip"
+)
+PROTOCOL_DIR = (
+    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    if "profiles" in os.path.abspath(__file__)
+    else os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+)
 PROJECT_ROOT = os.getcwd()
 ROKCT_DIR = os.path.join(PROJECT_ROOT, ".rokct")
 
+
 def check_self_update():
     dest_initiate = os.path.join(ROKCT_DIR, "initiate.py")
-    if os.path.exists(dest_initiate) and os.path.abspath(__file__) == os.path.abspath(dest_initiate):
+    if os.path.exists(dest_initiate) and os.path.abspath(__file__) == os.path.abspath(
+        dest_initiate
+    ):
         url = f"{GITHUB_RAW_BASE}/profiles/local/initiate.py"
         try:
-            req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0", "X-Trace-Id": "initiate-bootstrap"})
+            req = urllib.request.Request(
+                url,
+                headers={
+                    "User-Agent": "Mozilla/5.0",
+                    "X-Trace-Id": "initiate-bootstrap",
+                },
+            )
             with urllib.request.urlopen(req, timeout=10) as r:
                 remote_data = r.read()
             remote_hash = hashlib.sha256(remote_data).hexdigest()[:16]
             if remote_hash != file_hash(dest_initiate):
-                print("[init] GitHub has a newer initiate.py (local profile). Self-updating...")
+                print(
+                    "[init] GitHub has a newer initiate.py (local profile). Self-updating..."
+                )
                 with open(dest_initiate, "wb") as f:
                     f.write(remote_data)
                 print("[init] Reloading initiate.py...")
@@ -34,11 +51,15 @@ def check_self_update():
         except Exception as e:
             print(f"[init] Self-update check failed: {e}", file=sys.stderr)
 
+
 def fetch_from_github(rel_path, dest_path):
     url = f"{GITHUB_RAW_BASE}/{rel_path}"
     os.makedirs(os.path.dirname(dest_path), exist_ok=True)
     try:
-        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0", "X-Trace-Id": "initiate-bootstrap"})
+        req = urllib.request.Request(
+            url,
+            headers={"User-Agent": "Mozilla/5.0", "X-Trace-Id": "initiate-bootstrap"},
+        )
         with urllib.request.urlopen(req, timeout=10) as r:
             with open(dest_path, "wb") as f:
                 f.write(r.read())
@@ -46,6 +67,7 @@ def fetch_from_github(rel_path, dest_path):
     except Exception as e:
         print(f"[init] Failed to fetch {rel_path}: {e}", file=sys.stderr)
         sys.exit(1)
+
 
 def ensure_file(rel_path, dest_path):
     src = os.path.join(PROTOCOL_DIR, rel_path)
@@ -58,11 +80,13 @@ def ensure_file(rel_path, dest_path):
     else:
         fetch_from_github(rel_path, dest_path)
 
+
 def file_hash(path):
     if not os.path.exists(path):
         return None
     with open(path, "rb") as f:
         return hashlib.sha256(f.read()).hexdigest()[:16]
+
 
 def copy_versioned(src_rel, dst_abs):
     src = os.path.join(PROTOCOL_DIR, src_rel)
@@ -72,12 +96,22 @@ def copy_versioned(src_rel, dst_abs):
             manifest = json.load(mf)
     else:
         try:
-            req = urllib.request.Request(f"{GITHUB_RAW_BASE}/core/templates/manifest.json", headers={"User-Agent": "Mozilla/5.0", "X-Trace-Id": "initiate-bootstrap"})
+            req = urllib.request.Request(
+                f"{GITHUB_RAW_BASE}/core/templates/manifest.json",
+                headers={
+                    "User-Agent": "Mozilla/5.0",
+                    "X-Trace-Id": "initiate-bootstrap",
+                },
+            )
             with urllib.request.urlopen(req, timeout=10) as r:
                 manifest = json.loads(r.read().decode())
         except Exception:
             manifest = {}
-    entry = manifest.get("files", {}).get(src_rel.split("core/templates/")[-1] if "core/templates/" in src_rel else src_rel.split("profiles/local/")[-1])
+    entry = manifest.get("files", {}).get(
+        src_rel.split("core/templates/")[-1]
+        if "core/templates/" in src_rel
+        else src_rel.split("profiles/local/")[-1]
+    )
     if not entry or not os.path.exists(src):
         fetch_from_github(src_rel, dst_abs)
         return
@@ -85,6 +119,7 @@ def copy_versioned(src_rel, dst_abs):
     if current_hash and current_hash == entry.get("hash"):
         return
     shutil.copy2(src, dst_abs)
+
 
 def copy_dir(rel_src, dst):
     src = os.path.join(PROTOCOL_DIR, rel_src)
@@ -94,7 +129,13 @@ def copy_dir(rel_src, dst):
     os.makedirs(dst, exist_ok=True)
     for item in os.listdir(src):
         # Skip sync files, maintenance, and the init guide - handled separately or not needed in .rokct
-        if item in ("sync_workspace.py", "sync_workspace.yml", "maintenance.yml", "init_protocol.md", ".rok"):
+        if item in (
+            "sync_workspace.py",
+            "sync_workspace.yml",
+            "maintenance.yml",
+            "init_protocol.md",
+            ".rok",
+        ):
             continue
         s = os.path.join(src, item)
         d = os.path.join(dst, item)
@@ -104,19 +145,27 @@ def copy_dir(rel_src, dst):
             rel = os.path.relpath(s, PROTOCOL_DIR)
             ensure_file(rel, d)
 
+
 def fetch_dir_from_github(rel_src, dst):
     prefix = f"The-Rokct-Protocol-main/{rel_src}/"
     try:
         print(f"[init] Fetching directory from GitHub: {rel_src}")
-        req = urllib.request.Request(GITHUB_ZIP_BASE, headers={"User-Agent": "Mozilla/5.0", "X-Trace-Id": "initiate-bootstrap"})
+        req = urllib.request.Request(
+            GITHUB_ZIP_BASE,
+            headers={"User-Agent": "Mozilla/5.0", "X-Trace-Id": "initiate-bootstrap"},
+        )
         with urllib.request.urlopen(req, timeout=10) as r:
             z = zipfile.ZipFile(io.BytesIO(r.read()))
         os.makedirs(dst, exist_ok=True)
         count = 0
         for name in z.namelist():
             if name.startswith(prefix) and not name.endswith("/"):
-                rel = name[len(prefix):]
-                if rel_src == "workflows" and (rel in ("sync_workspace.py", "sync_workspace.yml", "maintenance.yml") or rel.startswith(".rok/")):
+                rel = name[len(prefix) :]
+                if rel_src == "workflows" and (
+                    rel
+                    in ("sync_workspace.py", "sync_workspace.yml", "maintenance.yml")
+                    or rel.startswith(".rok/")
+                ):
                     continue
                 dest = os.path.join(dst, rel)
                 os.makedirs(os.path.dirname(dest), exist_ok=True)
@@ -126,6 +175,7 @@ def fetch_dir_from_github(rel_src, dst):
         print(f"[init] Fetched {count} files from {rel_src}")
     except Exception as e:
         print(f"[init] Failed to fetch directory {rel_src}: {e}", file=sys.stderr)
+
 
 def main():
     check_self_update()
@@ -141,7 +191,11 @@ def main():
 
     copy_dir("core/skills", os.path.join(ROKCT_DIR, "skills"))
     try:
-        origin_url = subprocess.check_output(["git", "config", "--get", "remote.origin.url"], text=True, stderr=subprocess.DEVNULL).strip()
+        origin_url = subprocess.check_output(
+            ["git", "config", "--get", "remote.origin.url"],
+            text=True,
+            stderr=subprocess.DEVNULL,
+        ).strip()
     except Exception:
         origin_url = ""
     if "RokctAI/" in origin_url:
@@ -182,9 +236,10 @@ def main():
     copy_dir("workflows", os.path.join(ROKCT_DIR, "workflows"))
     # Removed ensure_file("workflows/reinit_protocol.md", ...) as it was deleted and replaced by init_protocol.md
 
-
     try:
-        email = subprocess.check_output(["git", "config", "user.email"], text=True, stderr=subprocess.DEVNULL).strip()
+        email = subprocess.check_output(
+            ["git", "config", "user.email"], text=True, stderr=subprocess.DEVNULL
+        ).strip()
     except Exception:
         email = ""
     if email:
@@ -214,48 +269,75 @@ def main():
                 f.write("skills/\n")
             print("[init] Updated .gitignore")
 
-    ensure_file("workflows/sync_workspace.py", os.path.join(ROKCT_DIR, "sync_workspace.py"))
-    ensure_file("workflows/sync_workspace.yml", os.path.join(PROJECT_ROOT, ".github", "workflows", "sync_workspace.yml"))
-    ensure_file("profiles/local/end_protocol.py", os.path.join(ROKCT_DIR, "end_protocol.py"))
+    ensure_file(
+        "workflows/sync_workspace.py", os.path.join(ROKCT_DIR, "sync_workspace.py")
+    )
+    ensure_file(
+        "workflows/sync_workspace.yml",
+        os.path.join(PROJECT_ROOT, ".github", "workflows", "sync_workspace.yml"),
+    )
+    ensure_file(
+        "profiles/local/end_protocol.py", os.path.join(ROKCT_DIR, "end_protocol.py")
+    )
     # Don't copy initiate.py to itself if already running from .rokct/
     dest_initiate = os.path.join(ROKCT_DIR, "initiate.py")
     src_initiate = "profiles/local/initiate.py"
     if os.path.abspath(__file__) != dest_initiate:
         ensure_file(src_initiate, dest_initiate)
     print("[init] Copied initiate.py -> .rokct/initiate.py")
-    
+
     cfg = os.path.join(ROKCT_DIR, ".workspace_config.json")
     if not os.path.exists(cfg):
         try:
-            url = subprocess.check_output(["git", "config", "--get", "remote.origin.url"], text=True, stderr=subprocess.DEVNULL).strip()
+            url = subprocess.check_output(
+                ["git", "config", "--get", "remote.origin.url"],
+                text=True,
+                stderr=subprocess.DEVNULL,
+            ).strip()
         except Exception:
             url = ""
         if "RokctAI/" in url:
             parent = "RokctAI/occultation"
             print(f"[init] Auto-detected RokctAI repo, routing to {parent}")
         else:
-            parent = input("[init] Enter parent workspace repo (owner/repo) or press Enter for standalone: ").strip()
+            parent = input(
+                "[init] Enter parent workspace repo (owner/repo) or press Enter for standalone: "
+            ).strip()
         if parent:
             with open(cfg, "w", encoding="utf-8") as f:
-                json.dump({"parent_repo": parent, "parent_branch": "main", "working_files": templates}, f, indent=2)
+                json.dump(
+                    {
+                        "parent_repo": parent,
+                        "parent_branch": "main",
+                        "working_files": templates,
+                    },
+                    f,
+                    indent=2,
+                )
             print(f"[init] Created .workspace_config.json -> {parent}")
         else:
             print("[init] Standalone mode (no workspace sync)")
             # Only standalone or parent repos get the maintenance workflow (children don't need it)
-            ensure_file("workflows/maintenance.yml", os.path.join(PROJECT_ROOT, ".github", "workflows", "maintenance.yml"))
+            ensure_file(
+                "workflows/maintenance.yml",
+                os.path.join(PROJECT_ROOT, ".github", "workflows", "maintenance.yml"),
+            )
             print("[init] Installed maintenance workflow for parent/standalone repo")
     else:
         # If config already exists, check if it's a parent (no parent_repo set)
         with open(cfg, "r", encoding="utf-8") as f:
             config_data = json.load(f)
             if not config_data.get("parent_repo"):
-                ensure_file("workflows/maintenance.yml", os.path.join(PROJECT_ROOT, ".github", "workflows", "maintenance.yml"))
+                ensure_file(
+                    "workflows/maintenance.yml",
+                    os.path.join(
+                        PROJECT_ROOT, ".github", "workflows", "maintenance.yml"
+                    ),
+                )
                 print("[init] Verified maintenance workflow for parent/standalone repo")
-
 
     print("[init] Local profile init complete.")
 
+
 if __name__ == "__main__":
     main()
-
-
