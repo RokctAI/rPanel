@@ -13,9 +13,13 @@ import hashlib
 
 
 @frappe.whitelist()
-def clone_repository(website_name: str, repo_url: str, branch: str="main", deploy_key: str=None) -> dict:
+def clone_repository(
+    website_name: str, repo_url: str, branch: str = "main", deploy_key: str = None
+) -> dict:
     """Clone a Git repository to website directory"""
-    sys.stderr.write(f"[TRACE] clone_repository trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n")
+    sys.stderr.write(
+        f"[TRACE] clone_repository trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n"
+    )
     website = frappe.get_doc("Hosted Website", website_name)
 
     try:
@@ -52,7 +56,9 @@ def clone_repository(website_name: str, repo_url: str, branch: str="main", deplo
 @frappe.whitelist()
 def pull_latest(website_name: str) -> dict:
     """Pull latest changes from Git repository"""
-    sys.stderr.write(f"[TRACE] pull_latest trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n")
+    sys.stderr.write(
+        f"[TRACE] pull_latest trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n"
+    )
     website = frappe.get_doc("Hosted Website", website_name)
 
     try:
@@ -90,7 +96,9 @@ def pull_latest(website_name: str) -> dict:
 @frappe.whitelist()
 def switch_branch(website_name: str, branch: str) -> dict:
     """Switch to a different Git branch"""
-    sys.stderr.write(f"[TRACE] switch_branch trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n")
+    sys.stderr.write(
+        f"[TRACE] switch_branch trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n"
+    )
     website = frappe.get_doc("Hosted Website", website_name)
 
     try:
@@ -127,7 +135,9 @@ def switch_branch(website_name: str, branch: str) -> dict:
 @frappe.whitelist()
 def get_branches(website_name: str) -> dict:
     """Get list of available Git branches"""
-    sys.stderr.write(f"[TRACE] get_branches trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n")
+    sys.stderr.write(
+        f"[TRACE] get_branches trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n"
+    )
     website = frappe.get_doc("Hosted Website", website_name)
 
     try:
@@ -155,7 +165,9 @@ def get_branches(website_name: str) -> dict:
 @frappe.whitelist()
 def get_deployment_history(website_name: str, limit: int = 10) -> dict:
     """Get deployment history from Git log"""
-    sys.stderr.write(f"[TRACE] get_deployment_history trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n")
+    sys.stderr.write(
+        f"[TRACE] get_deployment_history trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n"
+    )
     website = frappe.get_doc("Hosted Website", website_name)
 
     try:
@@ -203,7 +215,9 @@ def get_deployment_history(website_name: str, limit: int = 10) -> dict:
 @frappe.whitelist()
 def rollback_deployment(website_name: str, commit_hash: str) -> dict:
     """Rollback to a specific commit"""
-    sys.stderr.write(f"[TRACE] rollback_deployment trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n")
+    sys.stderr.write(
+        f"[TRACE] rollback_deployment trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n"
+    )
     website = frappe.get_doc("Hosted Website", website_name)
 
     try:
@@ -233,7 +247,9 @@ def rollback_deployment(website_name: str, commit_hash: str) -> dict:
 @frappe.whitelist()
 def setup_webhook(website_name: str) -> dict:
     """Generate webhook URL and secret for auto-deployment"""
-    sys.stderr.write(f"[TRACE] setup_webhook trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n")
+    sys.stderr.write(
+        f"[TRACE] setup_webhook trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n"
+    )
     website = frappe.get_doc("Hosted Website", website_name)
 
     # Generate webhook secret
@@ -258,7 +274,9 @@ def setup_webhook(website_name: str) -> dict:
 @frappe.whitelist(allow_guest=True)
 def handle_webhook(**kwargs) -> dict:
     """Handle Git webhook for auto-deployment"""
-    sys.stderr.write(f"[TRACE] handle_webhook trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n")
+    sys.stderr.write(
+        f"[TRACE] handle_webhook trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n"
+    )
     try:
         # Get website name from query params
         website_name = frappe.request.args.get("website")
@@ -302,7 +320,9 @@ def handle_webhook(**kwargs) -> dict:
 @frappe.whitelist()
 def get_git_status(website_name: str) -> dict:
     """Get current Git status"""
-    sys.stderr.write(f"[TRACE] get_git_status trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n")
+    sys.stderr.write(
+        f"[TRACE] get_git_status trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n"
+    )
     website = frappe.get_doc("Hosted Website", website_name)
 
     try:
