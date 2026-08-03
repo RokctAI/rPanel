@@ -128,7 +128,9 @@ class CronJob(Document):
 @frappe.whitelist()
 def execute_cron_job(job_name: str) -> dict:
     """Execute a cron job manually"""
-    sys.stderr.write(f"[TRACE] execute_cron_job trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n")
+    sys.stderr.write(
+        f"[TRACE] execute_cron_job trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n"
+    )
     job = frappe.get_doc("Cron Job", job_name)
     return job.execute()
 
@@ -136,7 +138,9 @@ def execute_cron_job(job_name: str) -> dict:
 @frappe.whitelist()
 def get_cron_templates() -> dict:
     """Get pre-built cron job templates"""
-    sys.stderr.write(f"[TRACE] get_cron_templates trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n")
+    sys.stderr.write(
+        f"[TRACE] get_cron_templates trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n"
+    )
     return [
         {
             "name": "Daily Backup",
@@ -174,7 +178,9 @@ def get_cron_templates() -> dict:
 @frappe.whitelist()
 def validate_cron_expression(expression: str) -> dict:
     """Validate cron expression and return next 5 run times"""
-    sys.stderr.write(f"[TRACE] validate_cron_expression trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n")
+    sys.stderr.write(
+        f"[TRACE] validate_cron_expression trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n"
+    )
     try:
         cron = croniter(expression, datetime.now())
         next_runs = []
@@ -207,9 +213,11 @@ def execute_scheduled_cron_jobs():
 
 
 @frappe.whitelist()
-def get_cron_jobs(website: str=None) -> dict:
+def get_cron_jobs(website: str = None) -> dict:
     """Get all cron jobs for a website"""
-    sys.stderr.write(f"[TRACE] get_cron_jobs trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n")
+    sys.stderr.write(
+        f"[TRACE] get_cron_jobs trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n"
+    )
     filters = {}
     if website:
         filters["website"] = website
@@ -236,9 +244,13 @@ def get_cron_jobs(website: str=None) -> dict:
 
 
 @frappe.whitelist()
-def create_cron_job(website: str, command: str, schedule: str, description: str=None) -> dict:
+def create_cron_job(
+    website: str, command: str, schedule: str, description: str = None
+) -> dict:
     """Create a new cron job"""
-    sys.stderr.write(f"[TRACE] create_cron_job trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n")
+    sys.stderr.write(
+        f"[TRACE] create_cron_job trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n"
+    )
     job = frappe.get_doc(
         {
             "doctype": "Cron Job",
@@ -254,9 +266,13 @@ def create_cron_job(website: str, command: str, schedule: str, description: str=
 
 
 @frappe.whitelist()
-def update_cron_job(name: str, website: str, command: str, schedule: str, description: str=None) -> dict:
+def update_cron_job(
+    name: str, website: str, command: str, schedule: str, description: str = None
+) -> dict:
     """Update an existing cron job"""
-    sys.stderr.write(f"[TRACE] update_cron_job trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n")
+    sys.stderr.write(
+        f"[TRACE] update_cron_job trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n"
+    )
     job = frappe.get_doc("Cron Job", name)
     job.website = website
     job.command = command
@@ -270,6 +286,8 @@ def update_cron_job(name: str, website: str, command: str, schedule: str, descri
 @frappe.whitelist()
 def delete_cron_job(name: str) -> dict:
     """Delete a cron job"""
-    sys.stderr.write(f"[TRACE] delete_cron_job trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n")
+    sys.stderr.write(
+        f"[TRACE] delete_cron_job trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n"
+    )
     frappe.delete_doc("Cron Job", name)
     return {"success": True}
