@@ -256,8 +256,7 @@ def check_uptime():
 
             # Make request
             start_time = time.time()
-            # nosec B501 — internal health check, certs are self-managed
-            response = requests.get(url, timeout=10, verify=False, headers={"X-Trace-Id": (getattr(getattr(__import__("frappe"), "local", None), "trace_id", None) or __import__("uuid").uuid4().hex)})
+            response = requests.get(url, timeout=10, verify=True, headers={"X-Trace-Id": (getattr(getattr(__import__("frappe"), "local", None), "trace_id", None) or __import__("uuid").uuid4().hex)})
             response_time = (time.time() - start_time) * 1000  # Convert to ms
 
             # Create uptime check

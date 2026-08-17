@@ -150,6 +150,8 @@ ufw default allow outgoing >>"$INSTALL_LOG" 2>&1 || true
 ufw allow ssh >>"$INSTALL_LOG" 2>&1 || true
 ufw allow http >>"$INSTALL_LOG" 2>&1 || true
 ufw allow https >>"$INSTALL_LOG" 2>&1 || true
+# Enable the firewall so the rules above take effect (ssh already allowed)
+ufw --force enable >>"$INSTALL_LOG" 2>&1 || true
 
 # Create directory structure
 echo -n -e "${BLUE}  - Setting up directory structure... ${NC}"
