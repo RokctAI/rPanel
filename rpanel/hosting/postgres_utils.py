@@ -7,6 +7,7 @@ Secure PostgreSQL command execution utilities.
 """
 
 import os
+import re
 import subprocess
 from typing import Optional
 import frappe
@@ -50,9 +51,20 @@ def create_pg_database(db_name: str, db_user: str, db_password: str):
     """
     Create a new PG database and user.
     """
+    # Security: db_user/db_name are interpolated as SQL identifiers, so require
+    # plain identifiers. This util is callable independently of the doctype guard.
+    if not re.match(r"^[a-zA-Z0-9_]+$", db_name or "") or not re.match(
+        r"^[a-zA-Z0-9_]+$", db_user or ""
+    ):
+        raise ValueError("Invalid database name or user")
+
+    # Escape single quotes so a quote in the password cannot break out of the
+    # SQL string literal. The value itself is never logged.
+    escaped_password = db_password.replace("'", "''")
+
     try:
         # 1. Create User
-        run_psql_command(f"CREATE USER {db_user} WITH PASSWORD '{db_password}';")
+        run_psql_command(f"CREATE USER {db_user} WITH PASSWORD '{escaped_password}';")
 
         # 2. Create Database
         run_psql_command(f"CREATE DATABASE {db_name} OWNER {db_user};")
