@@ -2,6 +2,8 @@
 # For license information, please see license.txt
 
 import sys
+import re
+import os
 import frappe
 import subprocess
 import json
@@ -12,8 +14,17 @@ def execute_query(database_name: str, query: str) -> dict:
     """Execute SQL query"""
     # Security: Only allow SELECT queries for safety
     sys.stderr.write(f"[TRACE] execute_query trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n")
-    if not query.strip().upper().startswith("SELECT"):
+    frappe.only_for("System Manager")
+
+    stripped = query.strip()
+    if not stripped.upper().startswith("SELECT"):
         return {"success": False, "error": "Only SELECT queries are allowed"}
+
+    # Security: a bare ";" lets psql/mysql chain a second statement past the
+    # SELECT-only prefix check (e.g. "SELECT 1; DROP TABLE x"). Reject any
+    # semicolon except a single optional trailing one.
+    if ";" in stripped.rstrip(";"):
+        return {"success": False, "error": "Only a single SELECT statement is allowed"}
 
     try:
         if frappe.db.db_type == "postgres":
@@ -62,6 +73,13 @@ def get_tables(database_name: str) -> dict:
 def get_table_structure(database_name: str, table_name: str) -> dict:
     """Get table structure"""
     sys.stderr.write(f"[TRACE] get_table_structure trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n")
+    frappe.only_for("System Manager")
+
+    # Security: table_name is interpolated into SQL below, so restrict it to a
+    # plain identifier to prevent SQL injection.
+    if not re.match(r"^[a-zA-Z0-9_]+$", table_name or ""):
+        return {"success": False, "error": "Invalid table name"}
+
     try:
         if frappe.db.db_type == "postgres":
             # Query for postgres table structure
@@ -123,6 +141,16 @@ def export_database(database_name: str, export_format: str="sql") -> dict:
 def import_database(database_name: str, import_file: str) -> dict:
     """Import database from SQL file"""
     sys.stderr.write(f"[TRACE] import_database trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n")
+    frappe.only_for("System Manager")
+
+    # Security: only allow importing files from the site's private files dir so
+    # an arbitrary caller-controlled path cannot be fed to psql/mysql.
+    allowed_base = os.path.realpath(frappe.get_site_path("private", "files"))
+    resolved_file = os.path.realpath(import_file)
+    if resolved_file != allowed_base and not resolved_file.startswith(allowed_base + os.sep):
+        return {"success": False, "error": "Import file must be in the site's private files directory"}
+    import_file = resolved_file
+
     try:
         if frappe.db.db_type == "postgres":
             # psql security: Use list and redirect stdin

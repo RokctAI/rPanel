@@ -7,6 +7,8 @@ import frappe
 import os
 import base64
 
+from rpanel.hosting.utils import _safe_path
+
 
 @frappe.whitelist()
 def get_file_list(website_name: str, path: str="") -> dict:
@@ -18,17 +20,17 @@ def get_file_list(website_name: str, path: str="") -> dict:
         base_path = os.path.abspath(frappe.get_site_path())
     else:
         doc = frappe.get_doc("Hosted Website", website_name)
+        doc.check_permission("read")
         base_path = doc.site_path
 
     # Security: Ensure path doesn't escape site_path
     if not base_path or not os.path.exists(base_path):
         frappe.throw(f"Site path does not exist: {base_path}")
 
-    # Construct full path
-    full_path = os.path.join(base_path, path.lstrip("/"))
-
-    # Security check: ensure we're still within site_path
-    if not os.path.abspath(full_path).startswith(os.path.abspath(base_path)):
+    # Security check: resolve and confine the path within site_path
+    try:
+        full_path = _safe_path(base_path, path.lstrip("/"))
+    except ValueError:
         frappe.throw("Invalid path - access denied")
 
     if not os.path.exists(full_path):
@@ -73,12 +75,13 @@ def download_file(website_name: str, file_path: str) -> dict:
         base_path = os.path.abspath(frappe.get_site_path())
     else:
         doc = frappe.get_doc("Hosted Website", website_name)
+        doc.check_permission("read")
         base_path = doc.site_path
 
-    full_path = os.path.join(base_path, file_path.lstrip("/"))
-
     # Security check
-    if not os.path.abspath(full_path).startswith(os.path.abspath(base_path)):
+    try:
+        full_path = _safe_path(base_path, file_path.lstrip("/"))
+    except ValueError:
         frappe.throw("Invalid path - access denied")
 
     if not os.path.exists(full_path) or os.path.isdir(full_path):
@@ -108,18 +111,23 @@ def upload_file(website_name: str, path: str, filename: str, filedata: str) -> d
         base_path = os.path.abspath(frappe.get_site_path())
     else:
         doc = frappe.get_doc("Hosted Website", website_name)
+        doc.check_permission("write")
         base_path = doc.site_path
 
-    target_dir = os.path.join(base_path, path.lstrip("/"))
-
     # Security check
-    if not os.path.abspath(target_dir).startswith(os.path.abspath(base_path)):
+    try:
+        target_dir = _safe_path(base_path, path.lstrip("/"))
+    except ValueError:
         frappe.throw("Invalid path - access denied")
 
     if not os.path.exists(target_dir):
         frappe.throw("Target directory does not exist")
 
-    target_file = os.path.join(target_dir, filename)
+    # Security check: confine filename within target_dir (no traversal)
+    try:
+        target_file = _safe_path(target_dir, filename)
+    except ValueError:
+        frappe.throw("Invalid path - access denied")
 
     try:
         # Decode base64 file data
@@ -153,12 +161,13 @@ def delete_file(website_name: str, file_path: str) -> dict:
         base_path = os.path.abspath(frappe.get_site_path())
     else:
         doc = frappe.get_doc("Hosted Website", website_name)
+        doc.check_permission("write")
         base_path = doc.site_path
 
-    full_path = os.path.join(base_path, file_path.lstrip("/"))
-
     # Security check
-    if not os.path.abspath(full_path).startswith(os.path.abspath(base_path)):
+    try:
+        full_path = _safe_path(base_path, file_path.lstrip("/"))
+    except ValueError:
         frappe.throw("Invalid path - access denied")
 
     if not os.path.exists(full_path):
@@ -189,13 +198,14 @@ def create_directory(website_name: str, path: str, dirname: str) -> dict:
         base_path = os.path.abspath(frappe.get_site_path())
     else:
         doc = frappe.get_doc("Hosted Website", website_name)
+        doc.check_permission("write")
         base_path = doc.site_path
 
-    parent_dir = os.path.join(base_path, path.lstrip("/"))
-    new_dir = os.path.join(parent_dir, dirname)
-
     # Security check
-    if not os.path.abspath(new_dir).startswith(os.path.abspath(base_path)):
+    try:
+        parent_dir = _safe_path(base_path, path.lstrip("/"))
+        new_dir = _safe_path(parent_dir, dirname)
+    except ValueError:
         frappe.throw("Invalid path - access denied")
 
     if os.path.exists(new_dir):
@@ -226,19 +236,15 @@ def rename_file(website_name: str, old_path: str, new_name: str) -> dict:
         base_path = os.path.abspath(frappe.get_site_path())
     else:
         doc = frappe.get_doc("Hosted Website", website_name)
+        doc.check_permission("write")
         base_path = doc.site_path
 
-    old_full_path = os.path.join(base_path, old_path.lstrip("/"))
-
-    # Get parent directory
-    parent_dir = os.path.dirname(old_full_path)
-    new_full_path = os.path.join(parent_dir, new_name)
-
-    # Security checks
-    if not os.path.abspath(old_full_path).startswith(os.path.abspath(base_path)):
-        frappe.throw("Invalid path - access denied")
-
-    if not os.path.abspath(new_full_path).startswith(os.path.abspath(base_path)):
+    # Security checks: confine both the source and the renamed target
+    try:
+        old_full_path = _safe_path(base_path, old_path.lstrip("/"))
+        parent_dir = os.path.dirname(old_full_path)
+        new_full_path = _safe_path(parent_dir, new_name)
+    except ValueError:
         frappe.throw("Invalid path - access denied")
 
     if not os.path.exists(old_full_path):
@@ -271,12 +277,13 @@ def read_file(website_name: str, file_path: str) -> dict:
         base_path = os.path.abspath(frappe.get_site_path())
     else:
         doc = frappe.get_doc("Hosted Website", website_name)
+        doc.check_permission("read")
         base_path = doc.site_path
 
-    full_path = os.path.join(base_path, file_path.lstrip("/"))
-
     # Security check
-    if not os.path.abspath(full_path).startswith(os.path.abspath(base_path)):
+    try:
+        full_path = _safe_path(base_path, file_path.lstrip("/"))
+    except ValueError:
         frappe.throw("Invalid path - access denied")
 
     if not os.path.exists(full_path) or os.path.isdir(full_path):
@@ -313,12 +320,13 @@ def save_file(website_name: str, file_path: str, content: str) -> dict:
         base_path = os.path.abspath(frappe.get_site_path())
     else:
         doc = frappe.get_doc("Hosted Website", website_name)
+        doc.check_permission("write")
         base_path = doc.site_path
 
-    full_path = os.path.join(base_path, file_path.lstrip("/"))
-
     # Security check
-    if not os.path.abspath(full_path).startswith(os.path.abspath(base_path)):
+    try:
+        full_path = _safe_path(base_path, file_path.lstrip("/"))
+    except ValueError:
         frappe.throw("Invalid path - access denied")
 
     try:

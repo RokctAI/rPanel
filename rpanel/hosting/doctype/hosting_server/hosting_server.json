@@ -78,7 +78,7 @@
         },
         {
             "fieldname": "ssh_key",
-            "fieldtype": "Code",
+            "fieldtype": "Password",
             "label": "SSH Private Key"
         },
         {

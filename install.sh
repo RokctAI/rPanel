@@ -34,7 +34,7 @@ export GOGC=50
 # Log file for verbose output
 INSTALL_LOG="/tmp/rpanel_install.log"
 touch "$INSTALL_LOG"
-chmod 666 "$INSTALL_LOG"
+chmod 600 "$INSTALL_LOG"
 
 echo -e "${BLUE}Detailed logs available at: $INSTALL_LOG${NC}"
 

@@ -12,6 +12,19 @@ import hmac
 import hashlib
 
 
+# Restrict git to safe transports. This blocks the ext:: and file:: transports,
+# which allow arbitrary command execution / local file access when a user-supplied
+# URL is cloned. https and ssh keep public and deploy-key clones working.
+GIT_ALLOWED_PROTOCOLS = "https:ssh"
+
+
+def _git_env() -> dict:
+    """Return an environment that restricts git remote transports."""
+    env = os.environ.copy()
+    env["GIT_ALLOW_PROTOCOL"] = GIT_ALLOWED_PROTOCOLS
+    return env
+
+
 @frappe.whitelist()
 def clone_repository(website_name: str, repo_url: str, branch: str="main", deploy_key: str=None) -> dict:
     """Clone a Git repository to website directory"""
@@ -26,10 +39,11 @@ def clone_repository(website_name: str, repo_url: str, branch: str="main", deplo
         # Ensure directory exists
         os.makedirs(website.site_path, exist_ok=True)
 
-        # Clone repository
-        cmd = f"git clone -b {branch} {repo_url} {website.site_path}"
+        # Clone repository. "--" stops repo_url being parsed as an option, and
+        # the restricted-protocol env blocks ext::/file:: transport abuse.
+        cmd = f"git clone -b {branch} -- {repo_url} {website.site_path}"
         result = subprocess.run(
-            shlex.split(cmd), capture_output=True, text=True, timeout=300
+            shlex.split(cmd), capture_output=True, text=True, timeout=300, env=_git_env()
         )
 
         if result.returncode == 0:
@@ -62,7 +76,7 @@ def pull_latest(website_name: str) -> dict:
         # Pull latest changes
         cmd = f"git -C {website.site_path} pull origin {website.git_branch or 'main'}"
         result = subprocess.run(
-            shlex.split(cmd), capture_output=True, text=True, timeout=300
+            shlex.split(cmd), capture_output=True, text=True, timeout=300, env=_git_env()
         )
 
         if result.returncode == 0:
@@ -102,12 +116,13 @@ def switch_branch(website_name: str, branch: str) -> dict:
             shlex.split(f"git -C {website.site_path} fetch --all"),
             capture_output=True,
             timeout=60,
+            env=_git_env(),
         )
 
         # Switch branch
         cmd = f"git -C {website.site_path} checkout {branch}"
         result = subprocess.run(
-            shlex.split(cmd), capture_output=True, text=True, timeout=60
+            shlex.split(cmd), capture_output=True, text=True, timeout=60, env=_git_env()
         )
 
         if result.returncode == 0:
@@ -213,7 +228,7 @@ def rollback_deployment(website_name: str, commit_hash: str) -> dict:
         # Reset to commit
         cmd = f"git -C {website.site_path} reset --hard {commit_hash}"
         result = subprocess.run(
-            shlex.split(cmd), capture_output=True, text=True, timeout=60
+            shlex.split(cmd), capture_output=True, text=True, timeout=60, env=_git_env()
         )
 
         if result.returncode == 0:
@@ -273,8 +288,13 @@ def handle_webhook(**kwargs) -> dict:
         ) or frappe.request.headers.get("X-Gitlab-Token")
 
         if website.webhook_secret:
-            # Verify signature for GitHub
-            if signature and signature.startswith("sha256="):
+            # Fail closed: a configured secret requires a valid signature header.
+            # A missing header must never bypass verification.
+            if not signature:
+                frappe.throw("Invalid webhook signature")
+
+            if signature.startswith("sha256="):
+                # GitHub-style HMAC signature over the payload
                 payload = frappe.request.get_data()
                 expected_signature = (
                     "sha256="
@@ -284,6 +304,10 @@ def handle_webhook(**kwargs) -> dict:
                 )
 
                 if not hmac.compare_digest(signature, expected_signature):
+                    frappe.throw("Invalid webhook signature")
+            else:
+                # GitLab-style shared-secret token (X-Gitlab-Token)
+                if not hmac.compare_digest(signature, website.webhook_secret):
                     frappe.throw("Invalid webhook signature")
 
         # Pull latest changes
