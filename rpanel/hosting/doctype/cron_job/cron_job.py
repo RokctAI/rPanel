@@ -129,6 +129,7 @@ class CronJob(Document):
 def execute_cron_job(job_name: str) -> dict:
     """Execute a cron job manually"""
     sys.stderr.write(f"[TRACE] execute_cron_job trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n")
+    frappe.only_for("System Manager")
     job = frappe.get_doc("Cron Job", job_name)
     return job.execute()
 
@@ -239,6 +240,7 @@ def get_cron_jobs(website: str=None) -> dict:
 def create_cron_job(website: str, command: str, schedule: str, description: str=None) -> dict:
     """Create a new cron job"""
     sys.stderr.write(f"[TRACE] create_cron_job trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n")
+    frappe.only_for("System Manager")
     job = frappe.get_doc(
         {
             "doctype": "Cron Job",
@@ -257,6 +259,7 @@ def create_cron_job(website: str, command: str, schedule: str, description: str=
 def update_cron_job(name: str, website: str, command: str, schedule: str, description: str=None) -> dict:
     """Update an existing cron job"""
     sys.stderr.write(f"[TRACE] update_cron_job trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n")
+    frappe.only_for("System Manager")
     job = frappe.get_doc("Cron Job", name)
     job.website = website
     job.command = command

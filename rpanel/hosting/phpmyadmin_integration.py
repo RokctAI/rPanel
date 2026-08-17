@@ -22,6 +22,7 @@ def _safe_path(base: str, untrusted: str) -> str:
 def setup_phpmyadmin(website_name: str) -> dict:
     """Setup phpMyAdmin for a website"""
     sys.stderr.write(f"[TRACE] setup_phpmyadmin trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n")
+    frappe.only_for("System Manager")
     website = frappe.get_doc("Hosted Website", website_name)
 
     try:

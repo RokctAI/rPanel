@@ -42,6 +42,7 @@ def test_connection(server_name: str) -> dict:
 def execute_command(server_name: str, command: str) -> dict:
     """Execute command on remote server"""
     sys.stderr.write(f"[TRACE] execute_command trace_id={getattr(getattr(__import__('frappe'), 'local', object()), 'trace_id', 'n/a')}\n")
+    frappe.only_for("System Manager")
     server = frappe.get_doc("Hosting Server", server_name)
 
     try:
