@@ -3,8 +3,7 @@
 Source file: `integration_examples/setup.py`
 
 ## Module Description
-RPanel Integration: Auto-Install Hook
-=====================================
+# RPanel Integration: Auto-Install Hook
 
 Use this code in your custom Frappe app to automatically install RPanel on your control site.
 

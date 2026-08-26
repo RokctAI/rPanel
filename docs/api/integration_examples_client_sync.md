@@ -3,8 +3,7 @@
 Source file: `integration_examples/client_sync.py`
 
 ## Module Description
-RPanel Integration: Client Sync Logic
-=====================================
+# RPanel Integration: Client Sync Logic
 
 Use this code to sync your Billing/Subscription system with RPanel Hosting Clients.
 
