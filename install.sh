@@ -419,7 +419,10 @@ install_bench() {
   run_quiet "Configuring Frappe User Yarn" sudo -u frappe -i bash -c "yarn config set ignore-engines true; yarn config set network-timeout 300000"
 
   echo -e "${BLUE}  - Initializing frappe-bench (Verbose)... ${NC}"
-  sudo -u frappe -i bash -c "set -e; export PATH=\"\$PATH:/home/frappe/.local/bin:/usr/local/bin\"; export YARN_NETWORK_TIMEOUT=300000; export NODE_OPTIONS='--max-old-space-size=1024'; cd /home/frappe; if [ ! -d \"frappe-bench\" ]; then bench init frappe-bench --frappe-branch version-16 --python $PYTHON_BIN --skip-assets --skip-redis-config-generation; fi; if [[ \"$DB_TYPE\" == \"postgres\" ]]; then ./frappe-bench/env/bin/pip install psycopg2-binary; fi"
+  # Frappe is deliberately pinned to a fixed release tag so upstream pushes never reach
+  # provisioning unreviewed. Bumping this pin is a deliberate act — the weekly advisory
+  # sweep proposes bumps.
+  sudo -u frappe -i bash -c "set -e; export PATH=\"\$PATH:/home/frappe/.local/bin:/usr/local/bin\"; export YARN_NETWORK_TIMEOUT=300000; export NODE_OPTIONS='--max-old-space-size=1024'; cd /home/frappe; if [ ! -d \"frappe-bench\" ]; then bench init frappe-bench --frappe-branch v16.32.0 --python $PYTHON_BIN --skip-assets --skip-redis-config-generation; fi; if [[ \"$DB_TYPE\" == \"postgres\" ]]; then ./frappe-bench/env/bin/pip install psycopg2-binary; fi"
 }
 
 fetch_latest_tag() {
