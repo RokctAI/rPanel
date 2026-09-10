@@ -52,8 +52,9 @@ class TestNginxManager(unittest.TestCase):
         self.manager.disable_site(config_name)
         mock_run.assert_called()  # Should call rm -f
 
+    @patch("rpanel.hosting.nginx_manager.os.geteuid", return_value=1000)
     @patch("rpanel.hosting.nginx_manager.subprocess.run")
-    def test_test_and_reload_success(self, mock_run):
+    def test_test_and_reload_success(self, mock_run, mock_euid):
         """Test successful Nginx reload"""
         # Mock nginx -t success
         mock_run.return_value = MagicMock(

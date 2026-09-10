@@ -21,29 +21,49 @@ def _safe_path(base: str, untrusted: str) -> str:
 # Removed 'import crypt' (incompatible with Python 3.13+)
 
 
-def run_certbot(domain, webroot):
-    """Issues a certificate for the domain using webroot challenge"""
+def build_certbot_command(domain, webroot, include_www=True, email=None):
+    """Builds the certbot webroot command for ``domain``.
+
+    ``include_www`` adds the ``www.<domain>`` SAN (the historical default for
+    hosted websites). Tenant backend domains such as ``platform.example.com``
+    have no ``www`` record, so callers pass ``include_www=False`` for those.
+    ``email`` defaults to ``admin@<domain>`` to keep the existing behaviour.
+    """
+    cmd = [
+        "sudo",
+        "certbot",
+        "certonly",
+        "--webroot",
+        "-w",
+        webroot,
+        "-d",
+        domain,
+    ]
+    if include_www:
+        cmd += ["-d", f"www.{domain}"]
+    cmd += [
+        "--non-interactive",
+        "--agree-tos",
+        "--email",
+        email or f"admin@{domain}",
+    ]
+    return cmd
+
+
+def run_certbot(domain, webroot, include_www=True, email=None):
+    """Issues a certificate for the domain using webroot challenge.
+
+    Returns ``(ok, message)``. The ``www.<domain>`` SAN is only requested when
+    ``include_www`` is true (default, unchanged for existing callers).
+    """
     try:
         # Ensure webroot exists
         if not os.path.exists(webroot):
             os.makedirs(webroot, exist_ok=True)
 
-        cmd = [
-            "sudo",
-            "certbot",
-            "certonly",
-            "--webroot",
-            "-w",
-            webroot,
-            "-d",
-            domain,
-            "-d",
-            f"www.{domain}",
-            "--non-interactive",
-            "--agree-tos",
-            "--email",
-            f"admin@{domain}",
-        ]
+        cmd = build_certbot_command(
+            domain, webroot, include_www=include_www, email=email
+        )
 
         subprocess.run(cmd, check=True, capture_output=True, text=True)
         return True, "Certificate issued successfully."
