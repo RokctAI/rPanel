@@ -267,6 +267,47 @@ backup.insert()
 backup.create_backup()
 ```
 
+### Reverse-proxy vhosts (tenant backend domains)
+
+A tenant's Frappe site can be served on its own hostname (for example
+`platform.example.com`) through the hub nginx. The control plane's
+backend-domain job drives this in-process; each call is idempotent:
+
+```python
+from rpanel.hosting.nginx_manager import (
+    create_reverse_proxy_vhost,
+    issue_certificate,
+    remove_vhost,
+    reload_nginx,
+)
+
+# 1. http vhost: proxies to the tenant and serves the ACME challenge
+create_reverse_proxy_vhost("platform.example.com", "http://tenant-app:8000")
+
+# 2. certificate for exactly that hostname (no www. SAN unless asked for)
+issue_certificate("platform.example.com", email="ops@example.com")
+
+# 3. rewrite: the live certificate is detected, port 80 now redirects to https
+create_reverse_proxy_vhost("platform.example.com", "http://tenant-app:8000")
+
+# later
+remove_vhost("platform.example.com")  # no error if it is already gone
+```
+
+- `create_reverse_proxy_vhost(domain, upstream, *, websocket=True, ssl=None)`
+  writes `sites-available/rpanel-<domain>.conf`, enables it, validates with
+  `nginx -t` (rolling back on failure) and reloads. The proxy sets `Host`,
+  `X-Forwarded-For/-Proto/-Host`, `X-Frappe-Site-Name`, websocket upgrade
+  headers, Frappe-friendly timeouts and `client_max_body_size 50m`. Returns
+  the config path.
+- `issue_certificate(domain, *, include_www=False, email=None)` runs the
+  certbot webroot flow against `/var/www/letsencrypt`.
+- `remove_vhost(domain)` removes the config and reloads only if something
+  was there.
+- `reload_nginx()` tries `systemctl reload nginx` and falls back to
+  `nginx -s reload` where there is no systemd (the hub container runs
+  `nginx -g 'daemon off;'`). All nginx reloads in `nginx_manager` use it.
+
 ## 🏗️ Architecture
 
 ```text
