@@ -799,6 +799,10 @@ def update_database_password(website: str, new_password: str) -> dict:
     if not new_password or len(new_password) < 8:
         return {"success": False, "error": "Password must be at least 8 characters"}
 
+    # Keep the current password so the server can be rolled back if the
+    # record cannot be saved afterwards.
+    old_password = site.get_password("db_password", raise_exception=False)
+
     try:
         _alter_database_password(site, new_password)
     except subprocess.CalledProcessError:
@@ -831,7 +835,45 @@ def update_database_password(website: str, new_password: str) -> dict:
                 "Database password changed, but wp-config.php could not be updated"
             )
 
-    site.save()
+    try:
+        site.save()
+    except Exception:
+        frappe.log_error(
+            f"Saving new database password failed for {site.name}; rolling back",
+            "Database password change",
+        )
+        rollback_failed = False
+        if old_password:
+            try:
+                _alter_database_password(site, old_password)
+            except Exception:
+                rollback_failed = True
+            if (
+                wp_config_error is None
+                and site.site_type == "CMS"
+                and site.cms_type == "WordPress"
+                and site.site_path
+                and os.path.exists(os.path.join(site.site_path, "wp-config.php"))
+            ):
+                site.db_password = old_password
+                try:
+                    site.generate_wp_config()
+                except Exception:
+                    rollback_failed = True
+        else:
+            rollback_failed = True
+        if rollback_failed:
+            frappe.log_error(
+                f"Database password rollback failed for {site.db_user}; "
+                "server and stored password may differ",
+                "Database password change",
+            )
+            return {
+                "success": False,
+                "error": "Saving failed and the database password could not be "
+                "rolled back. Contact support.",
+            }
+        return {"success": False, "error": "Failed to save the new database password"}
     if wp_config_error:
         return {"success": False, "error": wp_config_error}
     return {"success": True}

@@ -139,15 +139,16 @@ def get_client_websites(client_name: str) -> dict:
 
 
 def _client_site_filters(client_name: str | None) -> dict:
-    """Same scoping as get_client_websites; frappe.get_all applies the
-    caller's permissions, so omitting client_name lists what they can see."""
+    """Filter sites by client. Callers must query with frappe.get_list, which
+    applies the caller's permissions (frappe.get_all does not), so omitting
+    client_name lists only the sites the caller may read."""
     return {"client": client_name} if client_name else {}
 
 
 @frappe.whitelist()
 def get_client_emails(client_name: str | None = None) -> dict:
     """List email accounts across a client's websites (no passwords)."""
-    websites = frappe.get_all(
+    websites = frappe.get_list(
         "Hosted Website",
         filters=_client_site_filters(client_name),
         fields=["name", "domain"],
@@ -184,7 +185,7 @@ def get_client_emails(client_name: str | None = None) -> dict:
 @frappe.whitelist()
 def get_client_ftp_accounts(client_name: str | None = None) -> dict:
     """List FTP accounts across a client's websites (no passwords)."""
-    websites = frappe.get_all(
+    websites = frappe.get_list(
         "Hosted Website",
         filters=_client_site_filters(client_name),
         pluck="name",
@@ -192,6 +193,7 @@ def get_client_ftp_accounts(client_name: str | None = None) -> dict:
     if not websites:
         return {"success": True, "ftp_accounts": []}
 
+    # Sites are already permission-filtered above.
     accounts = frappe.get_all(
         "FTP Account",
         filters={"website": ["in", websites]},
@@ -213,7 +215,7 @@ def get_client_databases(client_name: str | None = None) -> dict:
     """List the database attached to each of a client's websites (no passwords)."""
     filters = _client_site_filters(client_name)
     filters["db_name"] = ["is", "set"]
-    databases = frappe.get_all(
+    databases = frappe.get_list(
         "Hosted Website",
         filters=filters,
         fields=["name", "domain", "db_name", "db_user", "db_engine"],
@@ -226,6 +228,7 @@ def get_client_databases(client_name: str | None = None) -> dict:
 @frappe.whitelist()
 def get_server_info() -> dict:
     """Basic facts about the host the panel runs on (ip, os, cores, uptime, services)."""
+    frappe.only_for("System Manager")
     import os
     import platform
     import socket
