@@ -6,6 +6,11 @@ app_name = "rpanel"
 app_title = "RPanel"
 app_publisher = "ROKCT INTELLIGENCE (PTY) LTD"
 app_description = "RPanel App for hosting"
+
+# rPanel is a Frappe app shell (Ray, 2026-09-26): the hosting module is
+# composed from hosting_sdk (RokctAI/hardware hosting/frappe) by the
+# the-rokct-protocol frappe composer, template rpanel.json, and the composed
+# output is committed. Shell-owned identity and hooks stay above the fence.
 app_email = "admin@rokct.ai"
 app_license = "AGPL-3.0"
 
@@ -82,11 +87,8 @@ on_migrate = "rpanel.install.after_migrate"
 # Scheduled Tasks
 # ---------------
 
-scheduler_events = {
-    "all": ["rpanel.hosting.tasks.every_5_minutes"],
-    "hourly": ["rpanel.hosting.tasks.hourly"],
-    "daily": ["rpanel.hosting.tasks.all"],
-}
+# Composed from hosting_sdk (hardware hosting/frappe manifest.json): see the
+# dynamic SDK hooks fence at the end of this file.
 
 # Testing
 # -------
@@ -99,7 +101,8 @@ whitelisted_methods = {"rpanel.api.get_version": "rpanel.version.get_version"}
 
 # Bench Commands
 # --------------
-commands = ["rpanel.commands.commands"]
+# Composed from hosting_sdk into rpanel/commands.py (bench reads
+# rpanel.commands.commands).
 
 # Overriding Methods
 # ------------------------------
@@ -159,4 +162,25 @@ commands = ["rpanel.commands.commands"]
 # Fixtures
 # --------
 
-fixtures = [{"dt": "Workspace", "filters": [["name", "in", ["Hosting"]]]}]
+# Composed from hosting_sdk (hardware hosting/frappe manifest.json): see the
+# dynamic SDK hooks fence at the end of this file.
+
+
+# --- BEG OF DYNAMIC SDK HOOKS ---
+
+# --- Module: hosting ---
+scheduler_events = globals().get('scheduler_events', {})
+scheduler_events.setdefault('all', [])
+for _t in ['rpanel.hosting.tasks.every_5_minutes']:
+    if _t not in scheduler_events['all']: scheduler_events['all'].append(_t)
+scheduler_events = globals().get('scheduler_events', {})
+scheduler_events.setdefault('hourly', [])
+for _t in ['rpanel.hosting.tasks.hourly']:
+    if _t not in scheduler_events['hourly']: scheduler_events['hourly'].append(_t)
+scheduler_events = globals().get('scheduler_events', {})
+scheduler_events.setdefault('daily', [])
+for _t in ['rpanel.hosting.tasks.all']:
+    if _t not in scheduler_events['daily']: scheduler_events['daily'].append(_t)
+fixtures = globals().get('fixtures', [])
+fixtures.append({'dt': 'Workspace', 'filters': [['name', 'in', ['Hosting']]]})
+# --- END OF DYNAMIC SDK HOOKS ---
