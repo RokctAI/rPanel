@@ -705,3 +705,111 @@ server {{
         except Exception as e:
             frappe.log_error(f"Suspension failed: {e}")
             frappe.logger().info(f"Suspension failed: {e}")
+
+
+_EMAIL_USER_RE = re.compile(r"^[a-zA-Z0-9._%+-]{1,64}$")
+
+
+def _get_writable_site(website: str) -> "HostedWebsite":
+    """Load a Hosted Website, requiring write permission for the caller."""
+    site = frappe.get_doc("Hosted Website", website)
+    site.check_permission("write")
+    return site
+
+
+def _find_email_row(site, email_user: str):
+    for row in site.email_accounts:
+        if row.email_user == email_user:
+            return row
+    return None
+
+
+@frappe.whitelist()
+def add_email_account(
+    website: str, email_user: str, password: str, quota_mb: int | None = None
+) -> dict:
+    """Add a mailbox to a website; on_update rewrites the mail config."""
+    site = _get_writable_site(website)
+    email_user = (email_user or "").strip().lower()
+    if not _EMAIL_USER_RE.match(email_user):
+        return {"success": False, "error": "Invalid email user"}
+    if not password:
+        return {"success": False, "error": "Password is required"}
+    if _find_email_row(site, email_user):
+        return {"success": False, "error": "Email account already exists"}
+
+    row = {"email_user": email_user, "password": password}
+    if quota_mb:
+        row["quota_mb"] = int(quota_mb)
+    site.append("email_accounts", row)
+    site.save()
+    return {"success": True, "email": f"{email_user}@{site.domain}"}
+
+
+@frappe.whitelist()
+def change_email_password(website: str, email_user: str, new_password: str) -> dict:
+    """Set a new password on an existing mailbox of a website."""
+    site = _get_writable_site(website)
+    if not new_password:
+        return {"success": False, "error": "Password is required"}
+    row = _find_email_row(site, email_user)
+    if not row:
+        return {"success": False, "error": "Email account not found"}
+    row.password = new_password
+    site.save()
+    return {"success": True}
+
+
+@frappe.whitelist()
+def delete_email_account(website: str, email_user: str) -> dict:
+    """Remove a mailbox from a website."""
+    site = _get_writable_site(website)
+    row = _find_email_row(site, email_user)
+    if not row:
+        return {"success": False, "error": "Email account not found"}
+    site.remove(row)
+    site.save()
+    return {"success": True}
+
+
+def _alter_database_password(site, new_password: str) -> None:
+    """Run ALTER USER for the site's database user on its engine."""
+    if not re.match(r"^[a-zA-Z0-9_]+$", site.db_user or ""):
+        frappe.throw("Invalid Database User")
+
+    if site.db_engine == "MariaDB":
+        escaped = new_password.replace("\\", "\\\\").replace("'", "\\'")
+        run_mysql_command(
+            sql=f"ALTER USER '{site.db_user}'@'localhost' IDENTIFIED BY '{escaped}';",
+            as_sudo=True,
+        )
+        run_mysql_command(sql="FLUSH PRIVILEGES;", as_sudo=True)
+    else:
+        from rpanel.hosting.postgres_utils import run_psql_command
+
+        escaped = new_password.replace("'", "''")
+        run_psql_command(f"ALTER USER {site.db_user} WITH PASSWORD '{escaped}';")
+
+
+@frappe.whitelist()
+def update_database_password(website: str, new_password: str) -> dict:
+    """Change the site's database user password on the server, then store it."""
+    site = _get_writable_site(website)
+    if not site.db_user:
+        return {"success": False, "error": "This website has no database user"}
+    if not new_password or len(new_password) < 8:
+        return {"success": False, "error": "Password must be at least 8 characters"}
+
+    try:
+        _alter_database_password(site, new_password)
+    except subprocess.CalledProcessError:
+        # stderr may echo the statement, so log without it.
+        frappe.log_error(
+            f"ALTER USER failed for {site.db_user} ({site.db_engine})",
+            "Database password change",
+        )
+        return {"success": False, "error": "Failed to change the database password"}
+
+    site.db_password = new_password
+    site.save()
+    return {"success": True}
