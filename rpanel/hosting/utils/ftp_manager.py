@@ -4,6 +4,7 @@
 """FTP account helpers called by the RokctAI hosting control pages."""
 
 import re
+import subprocess
 
 import frappe
 
@@ -43,3 +44,51 @@ def create_ftp_account(website: str, username: str, password: str) -> dict:
     ftp.insert()
 
     return {"success": True, "name": ftp.name, "username": ftp.username}
+
+
+def _get_writable_ftp_account(username: str):
+    name = frappe.db.get_value("FTP Account", {"username": username}, "name")
+    if not name:
+        frappe.throw("FTP account not found", frappe.DoesNotExistError)
+    ftp = frappe.get_doc("FTP Account", name)
+    if not frappe.has_permission("Hosted Website", "write", doc=ftp.website):
+        frappe.throw("Not permitted", frappe.PermissionError)
+    ftp.check_permission("write")
+    return ftp
+
+
+@frappe.whitelist()
+def change_ftp_password(username: str, new_password: str) -> dict:
+    """Change an FTP user's system password; store it only if chpasswd succeeds."""
+    ftp = _get_writable_ftp_account(username)
+    if not new_password:
+        return {"success": False, "error": "Password is required"}
+    if not _USERNAME_RE.match(ftp.username or ""):
+        return {"success": False, "error": "Invalid FTP username"}
+
+    try:
+        # Password goes over stdin so it never appears in the process list.
+        subprocess.run(
+            ["chpasswd"],
+            input=f"{ftp.username}:{new_password}",
+            text=True,
+            check=True,
+            capture_output=True,
+        )
+    except (subprocess.CalledProcessError, OSError):
+        frappe.log_error(
+            f"chpasswd failed for FTP user {ftp.username}", "FTP password change"
+        )
+        return {"success": False, "error": "Failed to change the FTP password"}
+
+    ftp.password = new_password
+    ftp.save()
+    return {"success": True}
+
+
+@frappe.whitelist()
+def delete_ftp_account(username: str) -> dict:
+    """Delete an FTP account; its on_trash removes the system user."""
+    ftp = _get_writable_ftp_account(username)
+    ftp.delete()
+    return {"success": True}

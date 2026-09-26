@@ -323,15 +323,6 @@ class HostedWebsite(Document):
                 "WordPress Installation Failed. Please check if WP-CLI is installed on the server."
             )
 
-
-def _safe_path(base: str, untrusted: str) -> str:
-    """Validate that resolved path stays within base directory (Layer 18 ZTNA)."""
-    resolved = os.path.realpath(os.path.join(base, untrusted))
-    base_real = os.path.realpath(base)
-    if not resolved.startswith(base_real + os.sep) and resolved != base_real:
-        raise ValueError(f"Path traversal blocked: {untrusted!r}")
-    return resolved
-
     def generate_wp_config(self):
         import requests
 
@@ -600,9 +591,10 @@ server {{
 
         # Create User
         run_mysql_command(
-            sql=f"CREATE USER IF NOT EXISTS '{
-                self.db_user
-            }'@'localhost' IDENTIFIED BY '{self.db_password}';",
+            sql=(
+                f"CREATE USER IF NOT EXISTS '{self.db_user}'@'localhost' "
+                f"IDENTIFIED BY '{self.db_password}';"
+            ),
             as_sudo=True,
         )
 
@@ -639,9 +631,8 @@ server {{
                 user_mgr.delete_user(self.system_user)
             else:
                 frappe.logger().info(
-                    f"User {self.system_user} still used by {
-                        remaining_sites
-                    } other site(s), preserving..."
+                    f"User {self.system_user} still used by "
+                    f"{remaining_sites} other site(s), preserving..."
                 )
 
             # Remove Nginx config
@@ -653,9 +644,8 @@ server {{
             # Remove Directory (Archive it instead of delete?)
             # For now, let's rename it to .deleted
             if os.path.exists(self.site_path):
-                archive_path = f"{self.site_path}_deleted_{
-                    frappe.utils.now_datetime().strftime('%Y%m%d%H%M%S')
-                }"
+                stamp = frappe.utils.now_datetime().strftime("%Y%m%d%H%M%S")
+                archive_path = f"{self.site_path}_deleted_{stamp}"
                 subprocess.run(["sudo", "mv", self.site_path, archive_path], check=True)
 
         except Exception as e:
@@ -705,6 +695,15 @@ server {{
         except Exception as e:
             frappe.log_error(f"Suspension failed: {e}")
             frappe.logger().info(f"Suspension failed: {e}")
+
+
+def _safe_path(base: str, untrusted: str) -> str:
+    """Validate that resolved path stays within base directory (Layer 18 ZTNA)."""
+    resolved = os.path.realpath(os.path.join(base, untrusted))
+    base_real = os.path.realpath(base)
+    if not resolved.startswith(base_real + os.sep) and resolved != base_real:
+        raise ValueError(f"Path traversal blocked: {untrusted!r}")
+    return resolved
 
 
 _EMAIL_USER_RE = re.compile(r"^[a-zA-Z0-9._%+-]{1,64}$")
@@ -811,5 +810,28 @@ def update_database_password(website: str, new_password: str) -> dict:
         return {"success": False, "error": "Failed to change the database password"}
 
     site.db_password = new_password
+
+    # WordPress reads the password from wp-config.php, so rewrite it while
+    # db_password still holds the plain value (save() masks it).
+    wp_config_error = None
+    if (
+        site.site_type == "CMS"
+        and site.cms_type == "WordPress"
+        and site.site_path
+        and os.path.exists(os.path.join(site.site_path, "wp-config.php"))
+    ):
+        try:
+            site.generate_wp_config()
+        except Exception:
+            frappe.log_error(
+                f"wp-config.php rewrite failed for {site.name}",
+                "Database password change",
+            )
+            wp_config_error = (
+                "Database password changed, but wp-config.php could not be updated"
+            )
+
     site.save()
+    if wp_config_error:
+        return {"success": False, "error": wp_config_error}
     return {"success": True}
