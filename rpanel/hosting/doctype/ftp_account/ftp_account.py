@@ -20,20 +20,23 @@ class FTPAccount(Document):
     def create_ftp_user(self):
         """Create system FTP user"""
         try:
+            # A home that already exists is shared (normally the site
+            # docroot): never let useradd take it over and never chown it
+            # away from the site user / php-fpm. Give the FTP user access
+            # through the directory's group instead.
+            shared_home = os.path.exists(self.home_directory)
+
             # 1. Create user
             # Avoid shell=False to prevent injection and separate args safely
-            subprocess.run(
-                [
-                    "useradd",
-                    "-m",
-                    "-d",
-                    self.home_directory,
-                    "-s",
-                    "/bin/bash",
-                    self.username,
-                ],
-                check=True,
-            )
+            cmd = ["useradd", "-d", self.home_directory, "-s", "/bin/bash"]
+            if shared_home:
+                import grp
+
+                group = grp.getgrgid(os.stat(self.home_directory).st_gid).gr_name
+                cmd += ["-M", "-G", group]
+            else:
+                cmd += ["-m"]
+            subprocess.run(cmd + [self.username], check=True)
 
             # 2. Set password SECURELY
             # Pass data via stdin (input=...) instead of echo.
@@ -41,12 +44,13 @@ class FTPAccount(Document):
             payload = f"{self.username}:{self.get_password('password')}"
             subprocess.run(["chpasswd"], input=payload, text=True, check=True)
 
-            # 3. Set permissions
-            subprocess.run(
-                ["chown", "-R", f"{self.username}:www-data", self.home_directory],
-                check=True,
-            )
-            subprocess.run(["chmod", "755", self.home_directory], check=True)
+            # 3. Set permissions (only on a home created for this user)
+            if not shared_home:
+                subprocess.run(
+                    ["chown", "-R", f"{self.username}:www-data", self.home_directory],
+                    check=True,
+                )
+                subprocess.run(["chmod", "755", self.home_directory], check=True)
 
             # 4. Add to vsftpd user list
             with open("/etc/vsftpd.userlist", "a") as f:
@@ -65,8 +69,40 @@ class FTPAccount(Document):
     def delete_ftp_user(self):
         """Delete system FTP user"""
         try:
-            # Delete user
-            subprocess.run(["userdel", "-r", self.username], check=True)
+            # Delete the user but never with -r: the home may be a site
+            # docroot shared with the website. Only remove a home that is
+            # not any website's path and is owned by this FTP user.
+            import pwd
+            import shutil
+
+            home = self.home_directory
+            try:
+                uid = pwd.getpwnam(self.username).pw_uid
+            except KeyError:
+                uid = None
+            subprocess.run(["userdel", self.username], check=True)
+            if home and uid is not None and os.path.isdir(home):
+                real = os.path.realpath(home)
+                site_paths = [
+                    os.path.realpath(p)
+                    for p in frappe.get_all(
+                        "Hosted Website",
+                        filters={"site_path": ["is", "set"]},
+                        pluck="site_path",
+                    )
+                ]
+                overlaps_site = any(
+                    real == sp
+                    or sp.startswith(real + os.sep)
+                    or real.startswith(sp + os.sep)
+                    for sp in site_paths
+                )
+                if (
+                    not overlaps_site
+                    and os.stat(real).st_uid == uid
+                    and real not in ("/", "/home", "/var/www")
+                ):
+                    shutil.rmtree(real)
 
             # Remove from vsftpd user list
             if os.path.exists("/etc/vsftpd.userlist"):

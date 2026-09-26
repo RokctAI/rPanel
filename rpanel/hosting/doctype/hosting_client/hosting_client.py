@@ -136,3 +136,137 @@ def get_client_websites(client_name: str) -> dict:
     )
 
     return {"success": True, "websites": websites}
+
+
+def _client_site_filters(client_name: str | None) -> dict:
+    """Filter sites by client. Callers must query with frappe.get_list, which
+    applies the caller's permissions (frappe.get_all does not), so omitting
+    client_name lists only the sites the caller may read."""
+    return {"client": client_name} if client_name else {}
+
+
+@frappe.whitelist()
+def get_client_emails(client_name: str | None = None) -> dict:
+    """List email accounts across a client's websites (no passwords)."""
+    websites = frappe.get_list(
+        "Hosted Website",
+        filters=_client_site_filters(client_name),
+        fields=["name", "domain"],
+    )
+    if not websites:
+        return {"success": True, "emails": []}
+
+    domains = {w.name: w.domain for w in websites}
+    rows = frappe.get_all(
+        "Hosted Email Account",
+        filters={
+            "parenttype": "Hosted Website",
+            "parentfield": "email_accounts",
+            "parent": ["in", list(domains)],
+        },
+        fields=["name", "parent", "email_user", "forward_to", "quota_mb"],
+        order_by="parent asc, idx asc",
+        ignore_permissions=True,  # parents already permission-filtered above
+    )
+    emails = [
+        {
+            "name": r.name,
+            "website_name": r.parent,
+            "domain": domains.get(r.parent),
+            "email_user": r.email_user,
+            "forward_to": r.forward_to,
+            "quota_mb": r.quota_mb,
+        }
+        for r in rows
+    ]
+    return {"success": True, "emails": emails}
+
+
+@frappe.whitelist()
+def get_client_ftp_accounts(client_name: str | None = None) -> dict:
+    """List FTP accounts across a client's websites (no passwords)."""
+    websites = frappe.get_list(
+        "Hosted Website",
+        filters=_client_site_filters(client_name),
+        pluck="name",
+    )
+    if not websites:
+        return {"success": True, "ftp_accounts": []}
+
+    # Sites are already permission-filtered above.
+    accounts = frappe.get_all(
+        "FTP Account",
+        filters={"website": ["in", websites]},
+        fields=[
+            "name",
+            "username",
+            "website",
+            "home_directory",
+            "quota_mb",
+            "enabled",
+            "permissions",
+        ],
+    )
+    return {"success": True, "ftp_accounts": accounts}
+
+
+@frappe.whitelist()
+def get_client_databases(client_name: str | None = None) -> dict:
+    """List the database attached to each of a client's websites (no passwords)."""
+    filters = _client_site_filters(client_name)
+    filters["db_name"] = ["is", "set"]
+    databases = frappe.get_list(
+        "Hosted Website",
+        filters=filters,
+        fields=["name", "domain", "db_name", "db_user", "db_engine"],
+    )
+    for db in databases:
+        db["host"] = "localhost"
+    return {"success": True, "databases": databases}
+
+
+@frappe.whitelist()
+def get_server_info() -> dict:
+    """Basic facts about the host the panel runs on (ip, os, cores, uptime, services)."""
+    frappe.only_for("System Manager")
+    import os
+    import platform
+    import socket
+
+    info = {"success": True, "os": "", "cores": os.cpu_count() or 0, "uptime": ""}
+
+    try:
+        with open("/etc/os-release") as f:
+            for line in f:
+                if line.startswith("PRETTY_NAME="):
+                    info["os"] = line.split("=", 1)[1].strip().strip('"')
+                    break
+    except OSError:
+        pass
+    if not info["os"]:
+        info["os"] = f"{platform.system()} {platform.release()}".strip()
+
+    try:
+        with open("/proc/uptime") as f:
+            seconds = int(float(f.read().split()[0]))
+        days, rem = divmod(seconds, 86400)
+        hours, rem = divmod(rem, 3600)
+        info["uptime"] = f"{days}d {hours}h {rem // 60}m"
+    except (OSError, ValueError, IndexError):
+        pass
+
+    try:
+        info["ip"] = socket.gethostbyname(socket.gethostname())
+    except OSError:
+        info["ip"] = ""
+
+    try:
+        from rpanel.hosting.doctype.hosting_settings.hosting_settings import (
+            get_system_status,
+        )
+
+        info["services"] = get_system_status()
+    except Exception:
+        info["services"] = {}
+
+    return info

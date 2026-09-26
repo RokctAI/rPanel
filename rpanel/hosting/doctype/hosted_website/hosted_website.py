@@ -323,15 +323,6 @@ class HostedWebsite(Document):
                 "WordPress Installation Failed. Please check if WP-CLI is installed on the server."
             )
 
-
-def _safe_path(base: str, untrusted: str) -> str:
-    """Validate that resolved path stays within base directory (Layer 18 ZTNA)."""
-    resolved = os.path.realpath(os.path.join(base, untrusted))
-    base_real = os.path.realpath(base)
-    if not resolved.startswith(base_real + os.sep) and resolved != base_real:
-        raise ValueError(f"Path traversal blocked: {untrusted!r}")
-    return resolved
-
     def generate_wp_config(self):
         import requests
 
@@ -600,9 +591,10 @@ server {{
 
         # Create User
         run_mysql_command(
-            sql=f"CREATE USER IF NOT EXISTS '{
-                self.db_user
-            }'@'localhost' IDENTIFIED BY '{self.db_password}';",
+            sql=(
+                f"CREATE USER IF NOT EXISTS '{self.db_user}'@'localhost' "
+                f"IDENTIFIED BY '{self.db_password}';"
+            ),
             as_sudo=True,
         )
 
@@ -639,9 +631,8 @@ server {{
                 user_mgr.delete_user(self.system_user)
             else:
                 frappe.logger().info(
-                    f"User {self.system_user} still used by {
-                        remaining_sites
-                    } other site(s), preserving..."
+                    f"User {self.system_user} still used by "
+                    f"{remaining_sites} other site(s), preserving..."
                 )
 
             # Remove Nginx config
@@ -653,9 +644,8 @@ server {{
             # Remove Directory (Archive it instead of delete?)
             # For now, let's rename it to .deleted
             if os.path.exists(self.site_path):
-                archive_path = f"{self.site_path}_deleted_{
-                    frappe.utils.now_datetime().strftime('%Y%m%d%H%M%S')
-                }"
+                stamp = frappe.utils.now_datetime().strftime("%Y%m%d%H%M%S")
+                archive_path = f"{self.site_path}_deleted_{stamp}"
                 subprocess.run(["sudo", "mv", self.site_path, archive_path], check=True)
 
         except Exception as e:
@@ -705,3 +695,185 @@ server {{
         except Exception as e:
             frappe.log_error(f"Suspension failed: {e}")
             frappe.logger().info(f"Suspension failed: {e}")
+
+
+def _safe_path(base: str, untrusted: str) -> str:
+    """Validate that resolved path stays within base directory (Layer 18 ZTNA)."""
+    resolved = os.path.realpath(os.path.join(base, untrusted))
+    base_real = os.path.realpath(base)
+    if not resolved.startswith(base_real + os.sep) and resolved != base_real:
+        raise ValueError(f"Path traversal blocked: {untrusted!r}")
+    return resolved
+
+
+_EMAIL_USER_RE = re.compile(r"^[a-zA-Z0-9._%+-]{1,64}$")
+
+
+def _get_writable_site(website: str) -> "HostedWebsite":
+    """Load a Hosted Website, requiring write permission for the caller."""
+    site = frappe.get_doc("Hosted Website", website)
+    site.check_permission("write")
+    return site
+
+
+def _find_email_row(site, email_user: str):
+    for row in site.email_accounts:
+        if row.email_user == email_user:
+            return row
+    return None
+
+
+@frappe.whitelist()
+def add_email_account(
+    website: str, email_user: str, password: str, quota_mb: int | None = None
+) -> dict:
+    """Add a mailbox to a website; on_update rewrites the mail config."""
+    site = _get_writable_site(website)
+    email_user = (email_user or "").strip().lower()
+    if not _EMAIL_USER_RE.match(email_user):
+        return {"success": False, "error": "Invalid email user"}
+    if not password:
+        return {"success": False, "error": "Password is required"}
+    if _find_email_row(site, email_user):
+        return {"success": False, "error": "Email account already exists"}
+
+    row = {"email_user": email_user, "password": password}
+    if quota_mb:
+        row["quota_mb"] = int(quota_mb)
+    site.append("email_accounts", row)
+    site.save()
+    return {"success": True, "email": f"{email_user}@{site.domain}"}
+
+
+@frappe.whitelist()
+def change_email_password(website: str, email_user: str, new_password: str) -> dict:
+    """Set a new password on an existing mailbox of a website."""
+    site = _get_writable_site(website)
+    if not new_password:
+        return {"success": False, "error": "Password is required"}
+    row = _find_email_row(site, email_user)
+    if not row:
+        return {"success": False, "error": "Email account not found"}
+    row.password = new_password
+    site.save()
+    return {"success": True}
+
+
+@frappe.whitelist()
+def delete_email_account(website: str, email_user: str) -> dict:
+    """Remove a mailbox from a website."""
+    site = _get_writable_site(website)
+    row = _find_email_row(site, email_user)
+    if not row:
+        return {"success": False, "error": "Email account not found"}
+    site.remove(row)
+    site.save()
+    return {"success": True}
+
+
+def _alter_database_password(site, new_password: str) -> None:
+    """Run ALTER USER for the site's database user on its engine."""
+    if not re.match(r"^[a-zA-Z0-9_]+$", site.db_user or ""):
+        frappe.throw("Invalid Database User")
+
+    if site.db_engine == "MariaDB":
+        escaped = new_password.replace("\\", "\\\\").replace("'", "\\'")
+        run_mysql_command(
+            sql=f"ALTER USER '{site.db_user}'@'localhost' IDENTIFIED BY '{escaped}';",
+            as_sudo=True,
+        )
+        run_mysql_command(sql="FLUSH PRIVILEGES;", as_sudo=True)
+    else:
+        from rpanel.hosting.postgres_utils import run_psql_command
+
+        escaped = new_password.replace("'", "''")
+        run_psql_command(f"ALTER USER {site.db_user} WITH PASSWORD '{escaped}';")
+
+
+@frappe.whitelist()
+def update_database_password(website: str, new_password: str) -> dict:
+    """Change the site's database user password on the server, then store it."""
+    site = _get_writable_site(website)
+    if not site.db_user:
+        return {"success": False, "error": "This website has no database user"}
+    if not new_password or len(new_password) < 8:
+        return {"success": False, "error": "Password must be at least 8 characters"}
+
+    # Keep the current password so the server can be rolled back if the
+    # record cannot be saved afterwards.
+    old_password = site.get_password("db_password", raise_exception=False)
+
+    try:
+        _alter_database_password(site, new_password)
+    except subprocess.CalledProcessError:
+        # stderr may echo the statement, so log without it.
+        frappe.log_error(
+            f"ALTER USER failed for {site.db_user} ({site.db_engine})",
+            "Database password change",
+        )
+        return {"success": False, "error": "Failed to change the database password"}
+
+    site.db_password = new_password
+
+    # WordPress reads the password from wp-config.php, so rewrite it while
+    # db_password still holds the plain value (save() masks it).
+    wp_config_error = None
+    if (
+        site.site_type == "CMS"
+        and site.cms_type == "WordPress"
+        and site.site_path
+        and os.path.exists(os.path.join(site.site_path, "wp-config.php"))
+    ):
+        try:
+            site.generate_wp_config()
+        except Exception:
+            frappe.log_error(
+                f"wp-config.php rewrite failed for {site.name}",
+                "Database password change",
+            )
+            wp_config_error = (
+                "Database password changed, but wp-config.php could not be updated"
+            )
+
+    try:
+        site.save()
+    except Exception:
+        frappe.log_error(
+            f"Saving new database password failed for {site.name}; rolling back",
+            "Database password change",
+        )
+        rollback_failed = False
+        if old_password:
+            try:
+                _alter_database_password(site, old_password)
+            except Exception:
+                rollback_failed = True
+            if (
+                wp_config_error is None
+                and site.site_type == "CMS"
+                and site.cms_type == "WordPress"
+                and site.site_path
+                and os.path.exists(os.path.join(site.site_path, "wp-config.php"))
+            ):
+                site.db_password = old_password
+                try:
+                    site.generate_wp_config()
+                except Exception:
+                    rollback_failed = True
+        else:
+            rollback_failed = True
+        if rollback_failed:
+            frappe.log_error(
+                f"Database password rollback failed for {site.db_user}; "
+                "server and stored password may differ",
+                "Database password change",
+            )
+            return {
+                "success": False,
+                "error": "Saving failed and the database password could not be "
+                "rolled back. Contact support.",
+            }
+        return {"success": False, "error": "Failed to save the new database password"}
+    if wp_config_error:
+        return {"success": False, "error": wp_config_error}
+    return {"success": True}
