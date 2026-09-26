@@ -1,5 +1,13 @@
 # rPanel - Professional Web Hosting Control Panel
 
+> **App shell.** rPanel is a Frappe app shell. Its `hosting` module is
+> composed from hosting_sdk (RokctAI/hardware, `hosting/frappe`) by the
+> the-rokct-protocol frappe composer (template `rpanel.json`, named by
+> `.rokct/config/app_type`). Because rPanel is open source, the composed
+> output is committed here. Change hosting code in hosting_sdk, then
+> re-compose; do not edit `rpanel/hosting/` or the fenced blocks in
+> `rpanel/hooks.py` and `rpanel/commands.py` by hand.
+
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Frappe Framework](https://img.shields.io/badge/Frappe-v15-orange)](https://frappeframework.com)
 [![Latest Version](https://img.shields.io/github/v/release/rokctAI/rpanel?label=Stable%20Version)](https://github.com/rokctAI/rpanel/releases)

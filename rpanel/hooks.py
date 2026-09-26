@@ -164,3 +164,23 @@ whitelisted_methods = {"rpanel.api.get_version": "rpanel.version.get_version"}
 
 # Composed from hosting_sdk (hardware hosting/frappe manifest.json): see the
 # dynamic SDK hooks fence at the end of this file.
+
+
+# --- BEG OF DYNAMIC SDK HOOKS ---
+
+# --- Module: hosting ---
+scheduler_events = globals().get('scheduler_events', {})
+scheduler_events.setdefault('all', [])
+for _t in ['rpanel.hosting.tasks.every_5_minutes']:
+    if _t not in scheduler_events['all']: scheduler_events['all'].append(_t)
+scheduler_events = globals().get('scheduler_events', {})
+scheduler_events.setdefault('hourly', [])
+for _t in ['rpanel.hosting.tasks.hourly']:
+    if _t not in scheduler_events['hourly']: scheduler_events['hourly'].append(_t)
+scheduler_events = globals().get('scheduler_events', {})
+scheduler_events.setdefault('daily', [])
+for _t in ['rpanel.hosting.tasks.all']:
+    if _t not in scheduler_events['daily']: scheduler_events['daily'].append(_t)
+fixtures = globals().get('fixtures', [])
+fixtures.append({'dt': 'Workspace', 'filters': [['name', 'in', ['Hosting']]]})
+# --- END OF DYNAMIC SDK HOOKS ---
